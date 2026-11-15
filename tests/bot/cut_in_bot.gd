@@ -1,7 +1,8 @@
 extends Node
 ## Milestone 7, Phase 3 (C5): the drawn cards in play. Mission 1's street under the trailer profile with the cards on, waves off
-## and the AI frozen: the mission title on the first frame, a Punk's entrance (skipped by a punch), a Thug's (no art yet: silent),
-## a knockout panel at each of the first two arena clears, Ox (no art yet: silent) and the mission end, held until a kick.
+## and the AI frozen: the mission title on the first frame, a Punk's entrance (skipped by a punch), the Thug's, Bruiser's and Kicker's
+## (each left to run its hold), a knockout panel at the first two arena clears (the Punk's) and one each for the Thug, Bruiser, Kicker
+## and Ox, Ox's name card at the boss intro, and the mission end, held until a kick.
 ## It writes `C5-BOT` lines (each card at its frame, the simulation's scale while it is up, PASS / FAIL checks) and quits.
 ## Record it with tools/capture_bot.sh (docs/milestones/M7-calls/c5.md has the command and the stills):
 ##   tools/capture_bot.sh res://tests/bot/cut_in_bot.tscn captures/m7-comic/c5 "" 3
@@ -17,6 +18,7 @@ var _level: LevelRoot
 var _cut_in: CutIn
 var _cards: Array = []
 var _fails: int = 0
+var _last_skipped: bool = false
 var _profile: int = 1
 ## `--full-entrance`: let the Punk's entrance card run its whole hold instead of punching through it (for recordings).
 var _full_entrance: bool = false
@@ -55,6 +57,7 @@ func _on_started(kind: int, key: StringName) -> void:
 
 
 func _on_ended(kind: int, key: StringName, skipped: bool) -> void:
+	_last_skipped = skipped
 	print("C5-BOT f%d card_ended %s %s skipped=%s" % [Engine.get_physics_frames(), CutIn.Kind.keys()[kind], key, skipped])
 
 
@@ -94,6 +97,25 @@ func _knock_out(enemy: EnemyActor) -> void:
 	enemy.receive_hit(hit)
 
 
+## Waits for the card of `kind` and `key` that an event just brought (the enemy's entrance) to be up, then for its whole hold to run
+## out by itself: checks it showed, was not skipped, and went down. With the cards off, checks that none came.
+func _see_card(kind: StringName, key: StringName, on: bool) -> void:
+	await _ticks(10)
+	var up: bool = _cut_in.is_showing() and CutIn.Kind.keys()[_cut_in.current_kind()] == kind and _cut_in.current_key() == key
+	_check(up == on, "the %s %s card is up (cards %s)" % [key, String(kind).to_lower(), "on" if on else "off"])
+	await _ticks(LONG_WAIT)
+	_check(not _cut_in.is_showing() and not _last_skipped, "it ran out its hold and went down by itself")
+
+
+## Clears a fresh arena (the arena clears of the street's own are used up) and checks the knockout panel for `key` shows and ends alone.
+func _clear_arena_and_see(key: StringName, on: bool) -> void:
+	var arena := Node3D.new()
+	add_child(arena)
+	CombatEvents.arena_cleared.emit(arena)
+	await _see_card(&"KO", key, on)
+	arena.queue_free()
+
+
 func _run() -> void:
 	var on := _profile == 1
 	await _ticks(2)
@@ -116,11 +138,18 @@ func _run() -> void:
 		await _ticks(4)
 		_check(not _cut_in.is_showing(), "a punch skips it")
 	var second := _spawn(&"punk", Vector3(1.5, 0.0, -6.0))
-	var thug := _spawn(&"thug", Vector3(-1.5, 0.0, -7.0))
 	await _ticks(SETTLE)
-	_check(not _cut_in.is_showing(), "a second Punk and a Thug (no art yet) bring no card")
+	_check(not _cut_in.is_showing(), "a second Punk brings no card")
 
-	# Knockout panels at the first two arena clears.
+	# The other entrances, each seen once and left to run its whole hold (nothing is punched through).
+	var thug := _spawn(&"thug", Vector3(-1.5, 0.0, -7.0))
+	await _see_card(&"ENTRANCE", &"thug", on)
+	var bruiser := _spawn(&"bruiser", Vector3(-3.0, 0.0, -8.0))
+	await _see_card(&"ENTRANCE", &"bruiser", on)
+	var kicker := _spawn(&"kicker", Vector3(3.0, 0.0, -8.0))
+	await _see_card(&"ENTRANCE", &"kicker", on)
+
+	# Knockout panels at the first two arena clears (the Punk's two), then one each for the Thug, Bruiser and Kicker.
 	var arenas := _level.arenas()
 	_knock_out(punk)
 	await _ticks(SETTLE)
@@ -135,15 +164,20 @@ func _run() -> void:
 	await _ticks(SETTLE)
 	_check(_cut_in.is_showing() == on, "the second arena's clear shows the next panel")
 	await _ticks(SETTLE * 2)
+	for pair: Array in [[thug, &"thug"], [bruiser, &"bruiser"], [kicker, &"kicker"]]:
+		_knock_out(pair[0])
+		await _ticks(SETTLE)
+		await _clear_arena_and_see(pair[1], on)
 
-	# Ox: no art assigned yet, so no card.
+	# Ox: his name card at the boss intro, then his knockout panel.
 	var ox := _spawn(&"boss", Vector3(0.0, 0.0, -9.0))
+	await _see_card(&"ENTRANCE", &"boss", on)
+	_knock_out(ox)
 	await _ticks(SETTLE)
-	_check(not _cut_in.is_showing(), "Ox's name card waits for its art (skipped silently)")
-	if is_instance_valid(ox):
-		EncounterSpawner.remove_enemy(ox)
-	if is_instance_valid(thug):
-		EncounterSpawner.remove_enemy(thug)
+	await _clear_arena_and_see(&"boss", on)
+	for node: Variant in [ox, thug, bruiser, kicker]:
+		if is_instance_valid(node):
+			EncounterSpawner.remove_enemy(node)
 
 	# The mission end holds until a button.
 	CombatEvents.level_cleared.emit(_level)
@@ -155,7 +189,7 @@ func _run() -> void:
 	_check(TimeController.sim_scale() == 1.0, "the simulation runs again")
 	await _ticks(SETTLE)
 
-	var expected: Array = ["TITLE:title", "ENTRANCE:punk", "KO:punk", "KO:punk", "END:mission_end"] if on else []
+	var expected: Array = ["TITLE:title", "ENTRANCE:punk", "ENTRANCE:thug", "ENTRANCE:bruiser", "ENTRANCE:kicker", "KO:punk", "KO:punk", "KO:thug", "KO:bruiser", "KO:kicker", "ENTRANCE:boss", "KO:boss", "END:mission_end"] if on else []
 	_check(_cards == expected, "each card fired once at its event: %s" % [_cards])
 	print("C5-BOT done profile=%s fails=%d" % [LookProfile.profile_name(), _fails])
 	get_tree().quit(1 if _fails > 0 else 0)

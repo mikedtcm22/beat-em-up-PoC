@@ -118,5 +118,93 @@
    "refs_new/new_guard.png",
    "ko_punk_1_b.jpg"
   ]
+ },
+ {
+  "out": "thug_entrance_c.png",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs_e/thug_close.jpg",
+   "refs_e/thug_far.jpg",
+   "refs_e/style_ko_punk_1.jpg"
+  ],
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO numbers, NO HUD, NO health bars, NO UI, NO captions, NO sound-effect words anywhere. NO graffiti, NO writing, NO scrawl or lettering-like marks on any wall or surface. The first two reference images are game stills of the enemy (a close view, then a fight-distance view): the character must match them exactly (clothes, colours, face, gear). The last reference image is a finished card in the target drawing style: copy its rendering style, line weight, shading and night colour script, but NOT its character (the enemy is a different person from the man in it). Any fence is a simple hand-built drawn fence: vertical posts, two horizontal rails and uneven wooden boards or bars of different heights with a few gaps between them. ABSOLUTELY NO chain-link, NO diamond lattice, NO wire mesh anywhere in the image. Gloves and wraps are drawn very simply, one outline, three short finger lines and one cuff line, no scribble. The Pipe Thug: a dark navy knit beanie; the lower face wrapped in an olive-yellow bandana mask with only the narrowed eyes showing; an olive-khaki sleeveless hooded top with a dark strap across the chest closed by a gold buckle; bare tan forearms with cream wraps at the wrists and fists; olive trousers with two pale stripes around each shin; a dark blue pipe with a yellow-tan end held in one fist at shoulder height. Draw him in a menacing guard stance, fists raised, seen from low and slightly below so he looms, a glowing street lamp behind and the drawn fence and burn barrel in the night street, him centre-right of frame, his face clearly visible and bold with a deep brow shadow. The BOTTOM-LEFT third of the frame is calm, dark and low-contrast (deep indigo shadow and plain asphalt, no bright shapes there) because the game adds lettering there. "
+ },
+ {
+  "out": "bruiser_entrance_c.png",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs_e/bruiser_close.jpg",
+   "refs_e/bruiser_far.jpg",
+   "refs_e/style_ko_punk_1.jpg"
+  ],
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO numbers, NO HUD, NO health bars, NO UI, NO captions, NO sound-effect words anywhere. NO graffiti, NO writing, NO scrawl or lettering-like marks on any wall or surface. The first two reference images are game stills of the enemy (a close view, then a fight-distance view): the character must match them exactly (clothes, colours, face, gear). The last reference image is a finished card in the target drawing style: copy its rendering style, line weight, shading and night colour script, but NOT its character (the enemy is a different person from the man in it). Any fence is a simple hand-built drawn fence: vertical posts, two horizontal rails and uneven wooden boards or bars of different heights with a few gaps between them. ABSOLUTELY NO chain-link, NO diamond lattice, NO wire mesh anywhere in the image. Gloves and wraps are drawn very simply, one outline, three short finger lines and one cuff line, no scribble. The Bruiser: a pale lavender-white riot helmet with a dark visor slit and a purple face guard; huge padded off-white armour shoulder and forearm guards with black ink panels and straps; black fist guards; a pale armoured vest with a cream belt pouch; dark trousers with off-white knee pads. A walking wall of armour. Draw him in a menacing guard stance, fists raised, seen from low and slightly below so he looms, a glowing street lamp behind and the drawn fence and burn barrel in the night street, him centre-right of frame, his face clearly visible and bold with a deep brow shadow. The BOTTOM-LEFT third of the frame is calm, dark and low-contrast (deep indigo shadow and plain asphalt, no bright shapes there) because the game adds lettering there.  The left side of the frame is a continuing brick building wall with a few lit windows and the street in low-contrast indigo (a drawn, detailed but dim picture), NOT a flat empty dark void or black slab anywhere."
+ },
+ {
+  "out": "kicker_entrance_c.png",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs_e/kicker_close.jpg",
+   "refs_e/kicker_far.jpg",
+   "refs_e/style_ko_punk_1.jpg"
+  ],
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO numbers, NO HUD, NO health bars, NO UI, NO captions, NO sound-effect words anywhere. NO graffiti, NO writing, NO scrawl or lettering-like marks on any wall or surface. The first two reference images are game stills of the enemy (a close view, then a fight-distance view): the character must match them exactly (clothes, colours, face, gear). The last reference image is a finished card in the target drawing style: copy its rendering style, line weight, shading and night colour script, but NOT its character (the enemy is a different person from the man in it). Any fence is a simple hand-built drawn fence: vertical posts, two horizontal rails and uneven wooden boards or bars of different heights with a few gaps between them. ABSOLUTELY NO chain-link, NO diamond lattice, NO wire mesh anywhere in the image. Gloves and wraps are drawn very simply, one outline, three short finger lines and one cuff line, no scribble. The Kicker: a dark navy baseball cap; the lower face covered by a bright green mask; a bright green sleeveless hooded top; bare arms with big white-grey bandage wraps from the knuckles to the elbows; dark blue-grey trousers; green shin guards. Draw him in a menacing guard stance, fists raised, seen from low and slightly below so he looms, a glowing street lamp behind and the drawn fence and burn barrel in the night street, him centre-right of frame, his face clearly visible and bold with a deep brow shadow. The BOTTOM-LEFT third of the frame is calm, dark and low-contrast (deep indigo shadow and plain asphalt, no bright shapes there) because the game adds lettering there. "
+ },
+ {
+  "out": "ox_entrance_c.png",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs_e/ox_close.jpg",
+   "refs_e/ox_far.jpg",
+   "refs_e/style_ko_punk_1.jpg"
+  ],
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO numbers, NO HUD, NO health bars, NO UI, NO captions, NO sound-effect words anywhere. NO graffiti, NO writing, NO scrawl or lettering-like marks on any wall or surface. The first two reference images are game stills of the enemy (a close view, then a fight-distance view): the character must match them exactly (clothes, colours, face, gear). The last reference image is a finished card in the target drawing style: copy its rendering style, line weight, shading and night colour script, but NOT its character (the enemy is a different person from the man in it). Any fence is a simple hand-built drawn fence: vertical posts, two horizontal rails and uneven wooden boards or bars of different heights with a few gaps between them. ABSOLUTELY NO chain-link, NO diamond lattice, NO wire mesh anywhere in the image. Gloves and wraps are drawn very simply, one outline, three short finger lines and one cuff line, no scribble. Ox Pellerin, the boss, in his orange and dark brown colours: a dark brown hood with an orange band across the brow, heavy bald-looking brown face with a broad flat nose, closed or heavy-lidded eyes, a heavy jaw and a thick neck chain; huge orange gloves with black fist tips; broad dark brown forearm guards with orange rims; a dark brown vest with a big round orange belt-plate and orange side panels; a tan cloth apron below the belt; brown trousers and dark boots. A mountain of a man. Draw Ox in a menacing guard stance, fists raised, seen from low and slightly below so he looms, a glowing street lamp behind and the drawn fence and burn barrel in the night street, him centre-right of frame, his face clearly visible and bold with a deep brow shadow. The BOTTOM-LEFT third of the frame is calm, dark and low-contrast (deep indigo shadow and plain asphalt, no bright shapes there) because the game adds lettering there. "
+ },
+ {
+  "out": "ko_thug_c.png",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs_e/thug_close.jpg",
+   "refs_e/thug_far.jpg",
+   "refs_e/style_ko_punk_1.jpg"
+  ],
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO numbers, NO HUD, NO health bars, NO UI, NO captions, NO sound-effect words anywhere. NO graffiti, NO writing, NO scrawl or lettering-like marks on any wall or surface. The first two reference images are game stills of the enemy (a close view, then a fight-distance view): the character must match them exactly (clothes, colours, face, gear). The last reference image is a finished card in the target drawing style: copy its rendering style, line weight, shading and night colour script, but NOT its character (the enemy is a different person from the man in it). Any fence is a simple hand-built drawn fence: vertical posts, two horizontal rails and uneven wooden boards or bars of different heights with a few gaps between them. ABSOLUTELY NO chain-link, NO diamond lattice, NO wire mesh anywhere in the image. Gloves and wraps are drawn very simply, one outline, three short finger lines and one cuff line, no scribble. The Pipe Thug: a dark navy knit beanie; the lower face wrapped in an olive-yellow bandana mask with only the narrowed eyes showing; an olive-khaki sleeveless hooded top with a dark strap across the chest closed by a gold buckle; bare tan forearms with cream wraps at the wrists and fists; olive trousers with two pale stripes around each shin; a dark blue pipe with a yellow-tan end held in one fist at shoulder height. First-person: the player's gloved fist in a clean flat light grey sleeve landing on the Pipe Thug's jaw from the lower left, his head snapping to the right, the pipe flying out of his hand, a bold white impact star at the contact and bold speed lines radiating from the fist. The player's sleeve is flat light grey with at most two thin fold lines, NO black slash marks, NO cracks, NO scribbles or hatching on it; the drawn fence behind in the night street. Keep the opposite side of the frame clear of lettering-like shapes."
+ },
+ {
+  "out": "ko_bruiser_c.png",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs_e/bruiser_close.jpg",
+   "refs_e/bruiser_far.jpg",
+   "refs_e/style_ko_punk_1.jpg"
+  ],
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO numbers, NO HUD, NO health bars, NO UI, NO captions, NO sound-effect words anywhere. NO graffiti, NO writing, NO scrawl or lettering-like marks on any wall or surface. The first two reference images are game stills of the enemy (a close view, then a fight-distance view): the character must match them exactly (clothes, colours, face, gear). The last reference image is a finished card in the target drawing style: copy its rendering style, line weight, shading and night colour script, but NOT its character (the enemy is a different person from the man in it). Any fence is a simple hand-built drawn fence: vertical posts, two horizontal rails and uneven wooden boards or bars of different heights with a few gaps between them. ABSOLUTELY NO chain-link, NO diamond lattice, NO wire mesh anywhere in the image. Gloves and wraps are drawn very simply, one outline, three short finger lines and one cuff line, no scribble. The Bruiser: a pale lavender-white riot helmet with a dark visor slit and a purple face guard; huge padded off-white armour shoulder and forearm guards with black ink panels and straps; black fist guards; a pale armoured vest with a cream belt pouch; dark trousers with off-white knee pads. A walking wall of armour. First-person: the player's gloved fist in a clean flat light grey sleeve smashing into the Bruiser's armoured chest from the lower left, his helmet jolting back, a bold white impact star at the contact, dust bursting and bold speed lines radiating from the fist; the huge armoured bulk rocking back. The player's sleeve is flat light grey with at most two thin fold lines, NO black slash marks, NO cracks, NO scribbles or hatching on it; the drawn fence behind in the night street. Keep the opposite side of the frame clear of lettering-like shapes."
+ },
+ {
+  "out": "ko_kicker_c.png",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs_e/kicker_close.jpg",
+   "refs_e/kicker_far.jpg",
+   "refs_e/style_ko_punk_1.jpg"
+  ],
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO numbers, NO HUD, NO health bars, NO UI, NO captions, NO sound-effect words anywhere. NO graffiti, NO writing, NO scrawl or lettering-like marks on any wall or surface. The first two reference images are game stills of the enemy (a close view, then a fight-distance view): the character must match them exactly (clothes, colours, face, gear). The last reference image is a finished card in the target drawing style: copy its rendering style, line weight, shading and night colour script, but NOT its character (the enemy is a different person from the man in it). Any fence is a simple hand-built drawn fence: vertical posts, two horizontal rails and uneven wooden boards or bars of different heights with a few gaps between them. ABSOLUTELY NO chain-link, NO diamond lattice, NO wire mesh anywhere in the image. Gloves and wraps are drawn very simply, one outline, three short finger lines and one cuff line, no scribble. The Kicker: a dark navy baseball cap; the lower face covered by a bright green mask; a bright green sleeveless hooded top; bare arms with big white-grey bandage wraps from the knuckles to the elbows; dark blue-grey trousers; green shin guards. First-person: the player's gloved fist in a clean flat light grey sleeve landing on the Kicker's masked chin from the lower left, his cap flying off, his head snapping to the right, a bold white impact star at the contact and bold speed lines radiating from the fist. The player's sleeve is flat light grey with at most two thin fold lines, NO black slash marks, NO cracks, NO scribbles or hatching on it; the drawn fence behind in the night street. Keep the opposite side of the frame clear of lettering-like shapes."
+ },
+ {
+  "out": "ko_ox_c.png",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs_e/ox_close.jpg",
+   "refs_e/ox_far.jpg",
+   "refs_e/style_ko_punk_1.jpg"
+  ],
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO numbers, NO HUD, NO health bars, NO UI, NO captions, NO sound-effect words anywhere. NO graffiti, NO writing, NO scrawl or lettering-like marks on any wall or surface. The first two reference images are game stills of the enemy (a close view, then a fight-distance view): the character must match them exactly (clothes, colours, face, gear). The last reference image is a finished card in the target drawing style: copy its rendering style, line weight, shading and night colour script, but NOT its character (the enemy is a different person from the man in it). Any fence is a simple hand-built drawn fence: vertical posts, two horizontal rails and uneven wooden boards or bars of different heights with a few gaps between them. ABSOLUTELY NO chain-link, NO diamond lattice, NO wire mesh anywhere in the image. Gloves and wraps are drawn very simply, one outline, three short finger lines and one cuff line, no scribble. Ox Pellerin, the boss, in his orange and dark brown colours: a dark brown hood with an orange band across the brow, heavy bald-looking brown face with a broad flat nose, closed or heavy-lidded eyes, a heavy jaw and a thick neck chain; huge orange gloves with black fist tips; broad dark brown forearm guards with orange rims; a dark brown vest with a big round orange belt-plate and orange side panels; a tan cloth apron below the belt; brown trousers and dark boots. A mountain of a man. First-person: the player's gloved fist in a clean flat light grey sleeve landing on Ox's heavy jaw from the lower left, his big head snapping to the right, the hood slipping, his huge body rocking back but still standing, a bold white impact star at the contact and bold speed lines radiating from the fist. The player's sleeve is flat light grey with at most two thin fold lines, NO black slash marks, NO cracks, NO scribbles or hatching on it; the drawn fence behind in the night street. Keep the opposite side of the frame clear of lettering-like shapes."
  }
 ]
