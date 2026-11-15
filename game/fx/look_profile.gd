@@ -13,6 +13,11 @@ const DIR := "res://game/fx/look_profiles/"
 ## Each profile's file name (without ".tres"), by Id.
 const NAMES: Array[StringName] = [&"m6", &"trailer"]
 
+## Each profile's data once loaded, by Id. Held here because nothing else keeps it: `load` read the file (and the trailer's
+## look rows) from disk again on every call, several times a physics tick from LevelRoot's light (M7 T55: ~0.25 ms a tick
+## under m6, ~1.4 ms under the trailer).
+static var _loaded: Array[LookProfileData] = []
+
 
 ## The running profile's Id (Tuning's `look_profile`, kept in range).
 static func current() -> int:
@@ -26,9 +31,13 @@ static func profile_name(id: int = -1) -> StringName:
 
 ## The data of the running profile, or of `id` (a missing file gives M6's defaults).
 static func data(id: int = -1) -> LookProfileData:
-	var path := DIR + String(profile_name(id)) + ".tres"
-	var loaded := load(path) as LookProfileData if ResourceLoader.exists(path) else null
-	return loaded if loaded != null else LookProfileData.new()
+	var index := current() if id < 0 else clampi(id, 0, NAMES.size() - 1)
+	if _loaded.size() != NAMES.size():
+		_loaded.resize(NAMES.size())
+	if _loaded[index] == null:
+		var path := DIR + String(NAMES[index]) + ".tres"
+		_loaded[index] = load(path) as LookProfileData if ResourceLoader.exists(path) else null
+	return _loaded[index] if _loaded[index] != null else LookProfileData.new()
 
 
 ## Switch to the next profile, live (the F7 key): Tuning announces it, so the post pass, the materials
