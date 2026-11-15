@@ -119,6 +119,11 @@ func _clear_arena_and_see(key: StringName, on: bool) -> void:
 func _run() -> void:
 	var on := _profile == 1
 	await _ticks(2)
+	# The shipped set loads on a thread: the title goes up on the first step after it has arrived (the street waits meanwhile).
+	for i in 900:
+		if not on or _cut_in.is_showing():
+			break
+		await _ticks(1)
 	_check(on == _cut_in.is_showing() and (not on or _cut_in.current_kind() == CutIn.Kind.TITLE), "the title is up on the first frame (cards %s)" % ("on" if on else "off"))
 	var held := TimeController.sim_scale() == 0.0
 	_check(held == on, "the simulation holds while a card is up (sim_scale %.1f)" % TimeController.sim_scale())

@@ -40,6 +40,9 @@ const _STRAY_INNER: Array[Vector2] = [
 ]
 
 static var _bold_font: FontVariation
+## The screen rects (0..1 of the view) the HUD's boxes cover this frame, set by GameHud under the trailer profile (empty under m6):
+## the hit words and bursts keep out of them (ComicSprite).
+static var keep_out: Array[Rect2] = []
 
 
 ## True while the trailer look profile is running: the HUD then draws its comic caption boxes (Milestone 7, "HUD (M7)" tunables).
@@ -68,9 +71,10 @@ static func tone(color: Color) -> Color:
 	return Color(mapped, mapped.a * color.a)
 
 
-## The colour of an empty bar, a spent pip and a bar's trough: the cool dark trough under m6, the shaded cream paper under the trailer profile.
+## The colour of an empty bar, a spent pip and a bar's trough: the cool dark trough under m6, and under the trailer profile the dark ink
+## trough (hud_m7_trough), so lost health reads against the cream paper.
 static func empty_tone() -> Color:
-	return Tuning.data.hud_m7_paper_shade if comic() else TROUGH
+	return Tuning.data.hud_m7_trough if comic() else TROUGH
 
 
 ## Where a HUD element that sits in a corner or on an edge (`anchor`: (0,1) bottom-left, (0.5,1) bottom-centre) is drawn from under
@@ -80,6 +84,14 @@ static func corner_offset(size: Vector2, anchor: Vector2) -> Vector2:
 		return Vector2.ZERO
 	var d := Tuning.data
 	return Vector2(size.x * anchor.x, size.y * anchor.y) * (1.0 - d.hud_m7_scale) + Vector2(d.hud_m7_offset_x, d.hud_m7_offset_y)
+
+
+## `local` (a rect in the control's own space, drawn scaled and moved like corner_scale() and corner_offset()) as a rect of the screen.
+static func screen_rect(control: Control, local: Rect2, anchor: Vector2) -> Rect2:
+	var scale := corner_scale()
+	var offset := corner_offset(control.size, anchor)
+	var rect := Rect2(control.get_global_rect().position + offset + local.position * scale, local.size * scale)
+	return rect
 
 
 ## The scale of the player's panel and the boss bar: hud_m7_scale under the trailer profile, 1 under m6.
@@ -100,8 +112,8 @@ static func _same_rgb(a: Color, b: Color) -> bool:
 ## `table` (times `amount` px, kept small against the rect so a thin bar stays a clean shape). Falls back to the plain quad at 0.
 static func hand_polygon(rect: Rect2, slant: float, table: Array[Vector2], amount: float) -> PackedVector2Array:
 	var quad := slanted_quad(rect, slant)
-	var stray := minf(amount, minf(rect.size.x, rect.size.y) * 0.12)
-	if stray < 0.05:
+	var stray := minf(amount, minf(rect.size.x, rect.size.y) * Tuning.data.hud_m7_wobble_max_share)
+	if stray < Tuning.data.hud_m7_wobble_min_px:
 		return quad
 	var points := PackedVector2Array()
 	for i in 4:
@@ -218,24 +230,37 @@ static func _draw_comic_gauge(ci: CanvasItem, rect: Rect2, slant: float, gauge: 
 	var ink := with_alpha(d.hud_m7_ink, alpha)
 	if bw > 0.0:
 		ci.draw_colored_polygon(hand_polygon(rect.grow(bw), s, _STRAY_OUTER, d.hud_m7_wobble_px * 0.5), ink)
-	ci.draw_colored_polygon(hand_polygon(rect, s, _STRAY_INNER, d.hud_m7_wobble_px * 0.25), with_alpha(d.hud_m7_paper_shade, alpha))
+	ci.draw_colored_polygon(hand_polygon(rect, s, _STRAY_INNER, d.hud_m7_wobble_px * 0.25), with_alpha(d.hud_m7_trough, alpha))
 	var lo := maxf(gauge.chunk_lo, gauge.value)
 	if gauge.chunk_hi > lo:
 		_draw_chunk(ci, rect, s, lo, gauge.chunk_hi, gauge.chunk_age, alpha)
-	var color := tone(fill).lerp(Color.WHITE, gauge.flash * 0.7)
+	var color := tone(fill).lerp(Color.WHITE, gauge.flash * d.hud_m7_flash_share)
 	_draw_fill(ci, rect, s, gauge.value, with_alpha(color, alpha))
 
 
 ## The damage chunk: the span lo..hi of the bar, flat, in an ink edge. It hangs for hud_m7_chunk_hold_s, then falls (faster and
-## faster) and turns, and goes out over the last of the fall.
+## faster) and turns, and goes out over the last of the fall. It never leaves the bar: it falls out through its bottom edge.
 static func _draw_chunk(ci: CanvasItem, rect: Rect2, slant: float, lo: float, hi: float, age_s: float, alpha: float) -> void:
+	var shape := chunk_shape(rect, slant, lo, hi, age_s, alpha)
+	if shape.is_empty():
+		return
+	var d := Tuning.data
+	for piece: PackedVector2Array in shape.outer:
+		ci.draw_colored_polygon(piece, with_alpha(d.hud_m7_ink, shape.fade))
+	for piece: PackedVector2Array in shape.inner:
+		ci.draw_colored_polygon(piece, with_alpha(d.hud_m7_chunk, shape.fade))
+
+
+## The pieces the damage chunk draws this moment ({outer: ink edge, inner: fill, fade: opacity}), clipped to the bar `rect`; empty when
+## nothing shows.
+static func chunk_shape(rect: Rect2, slant: float, lo: float, hi: float, age_s: float, alpha: float) -> Dictionary:
 	var d := Tuning.data
 	var shift := slant * rect.size.y
 	var span := rect.size.x - shift
 	var x_lo := clampf(lo, 0.0, 1.0) * span
 	var x_hi := clampf(hi, 0.0, 1.0) * span
 	if x_hi - x_lo < 1.0:
-		return
+		return {}
 	var fall := clampf((age_s - d.hud_m7_chunk_hold_s) / maxf(d.hud_m7_chunk_fall_s, 0.01), 0.0, 1.0)
 	var corners := PackedVector2Array([
 		Vector2(rect.position.x + shift + x_lo, rect.position.y), Vector2(rect.position.x + shift + x_hi, rect.position.y),
@@ -244,19 +269,32 @@ static func _draw_chunk(ci: CanvasItem, rect: Rect2, slant: float, lo: float, hi
 	var centre := (corners[0] + corners[1] + corners[2] + corners[3]) * 0.25
 	var turn := deg_to_rad(d.hud_m7_chunk_spin_deg) * fall
 	var move := Vector2(0.0, d.hud_m7_chunk_drop_px * fall * fall)
-	var fade := alpha * (1.0 - clampf((fall - 0.7) / 0.3, 0.0, 1.0))
+	var fade_share := maxf(d.hud_m7_chunk_fade_share, 0.01)
+	var fade := alpha * (1.0 - clampf((fall - (1.0 - fade_share)) / fade_share, 0.0, 1.0))
 	if fade <= 0.0:
-		return
-	var edge := 2.5
+		return {}
+	var edge := d.hud_m7_chunk_edge_px
 	var outer := PackedVector2Array()
 	var inner := PackedVector2Array()
 	for i in 4:
 		var offset := corners[i] - centre
-		var grown := offset + offset.normalized() * edge * 1.4
+		var grown := offset + offset.normalized() * edge * d.hud_m7_chunk_edge_grow
 		outer.append(centre + grown.rotated(turn) + move)
 		inner.append(centre + offset.rotated(turn) + move)
-	ci.draw_colored_polygon(outer, with_alpha(d.hud_m7_ink, fade))
-	ci.draw_colored_polygon(inner, with_alpha(d.hud_m7_chunk, fade))
+	var bar := slanted_quad(rect.grow(maxf(d.hud_m7_bar_outline_scale, 0.0)), slant)
+	var shape := {outer = _clipped(outer, bar), inner = _clipped(inner, bar), fade = fade}
+	if shape.outer.is_empty() and shape.inner.is_empty():
+		return {}
+	return shape
+
+
+## `polygon` cut to `bar`: the pieces that triangulate (a sliver does not, and logs an error).
+static func _clipped(polygon: PackedVector2Array, bar: PackedVector2Array) -> Array[PackedVector2Array]:
+	var out: Array[PackedVector2Array] = []
+	for piece: PackedVector2Array in Geometry2D.intersect_polygons(polygon, bar):
+		if piece.size() >= 3 and not Geometry2D.triangulate_polygon(piece).is_empty():
+			out.append(piece)
+	return out
 
 
 ## Text with an optional ink outline. `pos` is the left end of the baseline (or of the

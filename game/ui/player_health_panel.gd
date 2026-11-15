@@ -166,3 +166,10 @@ func _draw_pips(area: Rect2) -> void:
 		var pip := Rect2(area.position + Vector2(float(i) * (pip_w + gap), 0.0), Vector2(pip_w, area.size.y))
 		var color := HudStyle.DURABILITY if i < pips_filled else HudStyle.empty_tone()
 		HudStyle.draw_slab(self, pip, 0.3, color, 2.0)
+
+
+## The panel as drawn, in screen pixels (where the hit words keep out); an empty rect while hidden or under m6.
+func keep_out_rect() -> Rect2:
+	if not visible or not HudStyle.comic():
+		return Rect2()
+	return HudStyle.screen_rect(self, Rect2(Vector2.ZERO, size), Vector2(0.0, 1.0))

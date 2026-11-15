@@ -194,8 +194,33 @@ func _inside_view(cam: Transform3D, pos: Vector3, depth: float, view_w: float, a
 	var limit := (half - extent).max(Vector2.ZERO)
 	local.x = clampf(local.x, -limit.x, limit.x)
 	local.y = clampf(local.y, -limit.y, limit.y)
+	local = _clear_of_hud(local, extent, limit, view_w, half.y * 2.0)
 	local.z = -depth
 	return cam.origin + cam.basis * local
+
+
+## Under the trailer profile `local` (view-plane meters) is moved off the HUD's boxes (HudStyle.keep_out, shares of the
+## view, the HUD bottom-left and bottom-centre): up above a box, or when that leaves the view to the side of it, so the whole word
+## reads. `extent` is half the sprite's size, `limit` how far its centre may go.
+func _clear_of_hud(local: Vector3, extent: Vector2, limit: Vector2, view_w: float, view_h: float) -> Vector3:
+	for box: Rect2 in HudStyle.keep_out:
+		var left := (box.position.x - 0.5) * view_w
+		var right := (box.end.x - 0.5) * view_w
+		var top := (0.5 - box.position.y) * view_h
+		var bottom := (0.5 - box.end.y) * view_h
+		if local.x + extent.x <= left or local.x - extent.x >= right or local.y - extent.y >= top or local.y + extent.y <= bottom:
+			continue
+		var up := top + extent.y
+		if up <= limit.y:
+			local.y = up
+			continue
+		var to_left := left - extent.x
+		var to_right := right + extent.x
+		if absf(local.x - to_left) <= absf(to_right - local.x) and to_left >= -limit.x:
+			local.x = to_left
+		elif to_right <= limit.x:
+			local.x = to_right
+	return local
 
 
 func _place_lying() -> void:

@@ -49,6 +49,8 @@ var director: Node
 var _help_auto_hide_left: float = 0.0
 ## The look the HUD last dressed for (true: the trailer profile's comic look, M7); -1 before the first time.
 var _comic_seen: int = -1
+## Whether the combat log was up under m6 when the HUD last dressed for the trailer look: returning to m6 puts it back as it was.
+var _m6_log_visible: bool = true
 
 
 func _ready() -> void:
@@ -58,6 +60,7 @@ func _ready() -> void:
 	add_child(go_cue)
 	cut_in = CutIn.new()
 	add_child(cut_in)
+	Tuning.changed.connect(_on_tuning_changed)
 	CombatEvents.hit_landed.connect(_on_hit_landed)
 	CombatEvents.attack_started.connect(combat_log.on_attack_started)
 	CombatEvents.attack_whiffed.connect(combat_log.add_whiff)
@@ -112,19 +115,49 @@ func advance(delta: float) -> void:
 	go_cue.advance(game_delta)
 	# The drawn cards (trailer look only) count game time too, and go last: they hold the simulation while up.
 	cut_in.advance(game_delta)
+	_update_keep_out()
 
 
 ## When the look profile flips (and on the first frame) dress the parts that are not redrawn from the look every frame: under the
 ## trailer profile the combat log, the HUD's debug line, starts away (L brings it back; hud_m7_log_visible keeps it up) and the help
-## overlay takes the caption box's hard shadow. Returning to m6 puts both back as they were by default.
+## overlay takes the caption box's hard shadow. Returning to m6 puts the log back as it was before (an L toggle or a script's choice stays).
 func _sync_look() -> void:
 	var comic := 1 if HudStyle.comic() else 0
 	if comic == _comic_seen:
 		return
+	if comic == 1 and _comic_seen != 1:
+		_m6_log_visible = combat_log.visible
 	_comic_seen = comic
-	combat_log.visible = comic == 0 or Tuning.data.hud_m7_log_visible
+	combat_log.visible = Tuning.data.hud_m7_log_visible if comic == 1 else _m6_log_visible
 	help_overlay.apply_look()
 	queue_redraw_parts()
+
+
+## Tell the hit words where the HUD's boxes are (HudStyle.keep_out, shares of the view): the player's panel and the boss bar, with the
+## hud_m7_pop_clear_px margin. Empty under m6.
+func _update_keep_out() -> void:
+	HudStyle.keep_out.clear()
+	if not HudStyle.comic():
+		return
+	var view := get_viewport().get_visible_rect().size
+	if view.x <= 0.0 or view.y <= 0.0:
+		return
+	var margin := Vector2.ONE * Tuning.data.hud_m7_pop_clear_px
+	for part: Rect2 in [player_panel.keep_out_rect(), boss_bar.keep_out_rect()]:
+		if part.size == Vector2.ZERO:
+			continue
+		var box := part.grow_individual(margin.x, margin.y, margin.x, margin.y)
+		HudStyle.keep_out.append(Rect2(box.position / view, box.size / view))
+
+
+func _exit_tree() -> void:
+	HudStyle.keep_out.clear()
+
+
+## A live change of the log tunable shows (or puts away) the log under the trailer profile, without a flip of the profile.
+func _on_tuning_changed(property: StringName) -> void:
+	if (property == &"hud_m7_log_visible" or property == &"") and _comic_seen == 1:
+		combat_log.visible = Tuning.data.hud_m7_log_visible
 
 
 ## Redraw every part that caches nothing (they draw each frame while visible; the rest are redrawn on their next event).

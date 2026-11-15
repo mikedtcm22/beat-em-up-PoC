@@ -34,7 +34,7 @@ func test_trailer_palette_comes_from_the_tunables() -> void:
 	assert_eq(HudStyle.tone(Color(HudStyle.INK, 0.5)), Color(0.1, 0.2, 0.3, 0.5), "ink keeps the alpha it was asked for")
 	assert_eq(HudStyle.tone(HudStyle.PAPER), Tuning.data.hud_m7_paper)
 	assert_eq(HudStyle.tone(HudStyle.GUARD), HudStyle.GUARD, "other colours as given")
-	assert_eq(HudStyle.empty_tone(), Tuning.data.hud_m7_paper_shade)
+	assert_eq(HudStyle.empty_tone(), Tuning.data.hud_m7_trough, "a dark ink trough, as m6's: lost health reads on the cream paper")
 	assert_almost_eq(HudStyle.slant_of(0.2), 0.2 * Tuning.data.hud_m7_slant_scale, 0.0001)
 
 
@@ -119,3 +119,115 @@ func test_every_part_draws_under_trailer_without_errors() -> void:
 	var box := hud.help_overlay.get_theme_stylebox(&"panel") as StyleBoxFlat
 	assert_not_null(box)
 	assert_eq(box.shadow_size, 0, "hard shadow")
+
+
+# --- x-cutin fixes ---------------------------------------------------------------------------------------------
+
+
+func test_flipping_to_trailer_and_back_leaves_the_m6_log_as_it_was() -> void:
+	var hud := HUD_SCENE.instantiate() as GameHud
+	add_child_autofree(hud)
+	hud.set_process(false)
+	hud.set_combat_log_visible(false)
+	_trailer()
+	hud.advance(0.016)
+	assert_false(hud.is_combat_log_visible())
+	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
+	hud.advance(0.016)
+	assert_false(hud.is_combat_log_visible(), "an m6 L toggle survives the flip")
+	hud.set_combat_log_visible(true)
+	_trailer()
+	hud.advance(0.016)
+	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
+	hud.advance(0.016)
+	assert_true(hud.is_combat_log_visible())
+
+
+func test_the_log_tunable_acts_live_under_trailer() -> void:
+	_trailer()
+	var hud := HUD_SCENE.instantiate() as GameHud
+	add_child_autofree(hud)
+	hud.set_process(false)
+	assert_false(hud.is_combat_log_visible())
+	Tuning.set_value(&"hud_m7_log_visible", true)
+	assert_true(hud.is_combat_log_visible(), "no flip of the profile needed")
+	Tuning.set_value(&"hud_m7_log_visible", false)
+	assert_false(hud.is_combat_log_visible())
+
+
+func test_the_damage_chunk_stays_inside_the_bar_and_the_trough_is_dark() -> void:
+	_trailer()
+	var bar := Rect2(100.0, 50.0, 400.0, 34.0)
+	var limit := bar.grow(Tuning.data.hud_m7_bar_outline_scale + 0.5)
+	var drawn := 0
+	for age in [0.0, 0.3, 0.45, 0.6, 0.75, 0.9]:
+		var shape := HudStyle.chunk_shape(bar, 0.04, 0.5, 0.8, age, 1.0)
+		for key in [&"outer", &"inner"]:
+			for piece: PackedVector2Array in shape.get(key, []):
+				drawn += 1
+				for point: Vector2 in piece:
+					assert_true(point.y <= limit.end.y and point.y >= limit.position.y, "age %.2f: %s stays within the bar's height" % [age, key])
+	assert_gt(drawn, 0, "it does draw while it hangs and falls")
+	var lightness := HudStyle.empty_tone().get_luminance()
+	assert_lt(lightness, Tuning.data.hud_m7_paper.get_luminance() * 0.5, "the empty part reads dark against the cream panel")
+
+
+func test_the_boss_bar_is_drawn_in_its_own_box_and_reports_it() -> void:
+	_trailer()
+	var hud := HUD_SCENE.instantiate() as GameHud
+	add_child_autofree(hud)
+	hud.set_process(false)
+	assert_eq(hud.boss_bar.keep_out_rect(), Rect2(), "hidden: no box")
+	var boss := CombatActor.new()
+	boss.max_health = 100.0
+	boss.health = 100.0
+	add_child_autofree(boss)
+	hud.show_boss(boss)
+	assert_gt(hud.boss_bar.keep_out_rect().size.x, 100.0, "the box the pops keep out of")
+
+
+func test_the_hud_publishes_its_boxes_to_the_hit_words_under_trailer_only() -> void:
+	_trailer()
+	var hud := HUD_SCENE.instantiate() as GameHud
+	add_child_autofree(hud)
+	hud.set_process(false)
+	var boss := CombatActor.new()
+	boss.max_health = 100.0
+	boss.health = 100.0
+	add_child_autofree(boss)
+	hud.show_boss(boss)
+	hud.player_panel.visible = true
+	hud.advance(0.016)
+	assert_gt(HudStyle.keep_out.size(), 0, "boxes published")
+	for box: Rect2 in HudStyle.keep_out:
+		assert_true(Rect2(0.0, 0.0, 1.0, 1.0).encloses(box), "as shares of the view")
+		assert_gt(box.position.y, 0.5, "in the bottom half")
+	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
+	hud.advance(0.016)
+	assert_eq(HudStyle.keep_out.size(), 0, "none under m6")
+
+
+func test_a_hit_word_is_pushed_out_of_the_hud_boxes() -> void:
+	_trailer()
+	HudStyle.keep_out = [Rect2(0.25, 0.8, 0.5, 0.18)]
+	var camera := Camera3D.new()
+	add_child_autofree(camera)
+	camera.current = true
+	var sprite := ComicSprite.new()
+	add_child_autofree(sprite)
+	sprite.set_art(ImageTexture.create_from_image(Image.create(64, 32, false, Image.FORMAT_RGBA8)))
+	sprite.size_m = 0.8
+	sprite.life = 1.0
+	sprite.anchor = camera.global_transform * Vector3(0.0, -1.7, -3.0)
+	sprite.keep_in_view = true
+	sprite.clamp_reach_deg = Vector2(90.0, 90.0)
+	sprite.place(camera)
+	var local := camera.global_transform.affine_inverse() * sprite.global_position
+	var view_w := VfxDirector.view_width_at(camera, 3.0)
+	var view_h := view_w / VfxDirector.view_aspect(camera)
+	var top_of_box := (0.5 - 0.8) * view_h
+	assert_gt(local.y - sprite.drawn_width * 0.25, top_of_box - 0.001, "the word sits above the box")
+	HudStyle.keep_out = []
+	sprite.place(camera)
+	var free_local := camera.global_transform.affine_inverse() * sprite.global_position
+	assert_lt(free_local.y, local.y, "without the box it sits lower, at its hit")
