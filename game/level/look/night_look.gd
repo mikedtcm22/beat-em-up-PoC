@@ -43,7 +43,7 @@ const KEY := &"t10_night_street"
 ## How far above the floor the pool cards lie (m).
 @export_range(0.005, 0.2, 0.005) var pool_lift_m: float = 0.03
 ## The wall glow's alphas (rim, core), and how far in front of the wall it lies (m).
-@export var wall_glow_alpha: Vector2 = Vector2(0.16, 0.26)
+@export var wall_glow_alpha: Vector2 = Vector2(0.4, 0.55)
 @export_range(0.005, 0.2, 0.005) var wall_lift_m: float = 0.03
 
 @export_group("Windows")

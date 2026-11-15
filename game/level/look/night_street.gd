@@ -349,6 +349,8 @@ func _build_mattes() -> void:
 		card.mesh = quad
 		card.position = matte.position
 		card.rotation.y = deg_to_rad(matte.yaw_deg)
+		if matte.mirror:
+			card.scale.x = -1.0
 		card.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		var material := ShaderMaterial.new()
 		material.shader = MATTE_SHADER

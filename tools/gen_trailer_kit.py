@@ -413,7 +413,46 @@ def paint_ground() -> Image.Image:
 	ink = ink_of(im, 56, 98, grow=5, soften=0.8)
 	rgb = match_luma(flatten(under_ink(im, ink), 0.7, 200.0), luma(ASPHALT))
 	rgb, ink = seamless(rgb, ink, True, False, 0.8, 1.0)
+	rgb, ink = clear_fold_bands(rgb, ink)
 	return finish_cell(rgb, ink)
+
+
+FOLD_BAND = 0.16  # the share of the tile's height, at each of its two z edges, that keeps no puddle and no crack (see clear_fold_bands)
+PUDDLE_BAND_TOP = 0.18  # how deep from each edge a puddle is looked for (the painting's puddles are whole inside these)
+PUDDLE_BAND_BOTTOM = 0.30
+PUDDLE_LUMA = 116  # a pixel lighter than this in a fold band is puddle (the asphalt sits near 100, a puddle near 125 to 140)
+
+
+def clear_fold_bands(rgb: Image.Image, ink: Image.Image) -> tuple:
+	"""M7 x-street: the shader mirrors the ground along z at every tile edge, so a puddle or a crack that touches an edge shows twice,
+	mirrored (two identical puddles, a V of cracks: the practice rooms are only a tile deep, so the fold is in the middle of the lane).
+	The two edge bands of the tile keep no ink and no puddle: the puddles there are painted out (the colour diffused in from the asphalt
+	round them), so the fold is plain asphalt and nothing repeats about it."""
+	w, h = rgb.size
+	band = round(h * FOLD_BAND)
+	edge = Image.new("L", (w, h), 0)
+	ImageDraw.Draw(edge).rectangle([0, 0, w, band], fill=255)
+	ImageDraw.Draw(edge).rectangle([0, h - band, w, h], fill=255)
+	# Ink: none inside the bands, a short ramp in from them (a crack ends as its tip, not at a cut).
+	ramp = edge.filter(ImageFilter.GaussianBlur(12))
+	keep = ImageChops.invert(ramp)
+	ink = ImageChops.multiply(ink, keep)
+	# Puddles: the light pixels inside the wider puddle bands (a puddle is painted out whole, never cut by the band's edge), grown so their
+	# rims and highlights go with them, and their ink with them.
+	wide = Image.new("L", (w, h), 0)
+	ImageDraw.Draw(wide).rectangle([0, 0, w, round(h * PUDDLE_BAND_TOP)], fill=255)
+	ImageDraw.Draw(wide).rectangle([0, h - round(h * PUDDLE_BAND_BOTTOM), w, h], fill=255)
+	light = rgb.convert("L").point(lambda v: 255 if v > PUDDLE_LUMA else 0)
+	mask = ImageChops.multiply(light, wide).filter(ImageFilter.MaxFilter(31)).filter(ImageFilter.MaxFilter(31))
+	ink = ImageChops.multiply(ink, ImageChops.invert(mask.filter(ImageFilter.MaxFilter(25))))
+	fill = rgb.copy()
+	mean = ImageStat.Stat(rgb, mask=ImageChops.invert(mask)).mean
+	fill.paste(tuple(round(c) for c in mean), mask=mask)
+	for _ in range(24):
+		fill = Image.composite(fill.filter(ImageFilter.GaussianBlur(28)), rgb, mask)
+	soft = mask.filter(ImageFilter.GaussianBlur(8))
+	rgb = Image.composite(fill, rgb, soft)
+	return rgb, ink
 
 
 FENCE_W = 2048

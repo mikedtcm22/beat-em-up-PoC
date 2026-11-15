@@ -34,7 +34,7 @@ enum Kind { LAMP, BARREL }
 @export var pool_m: float = 6.0
 @export_range(0.0, 1.0, 0.01) var pool_push: float = 0.25
 ## The painted glow on the wall nearest the lamp: its diameter in metres (0: none) and its height above the lamp head's.
-@export var wall_glow_m: float = 4.8
+@export var wall_glow_m: float = 2.2
 @export var wall_glow_rise_m: float = -0.4
 @export_group("Shaft")
 @export var shaft: bool = false

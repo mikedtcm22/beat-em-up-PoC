@@ -244,8 +244,8 @@ func _steam_material(wisp: bool, seed_no: int) -> ShaderMaterial:
 	mat.set_shader_parameter(&"rate", t.tfx_steam_rate)
 	mat.set_shader_parameter(&"card_m", Vector2(t.tfx_wisp_card_w_m, t.tfx_wisp_card_h_m) if wisp else Vector2(t.tfx_steam_card_w_m, t.tfx_steam_card_h_m))
 	if wisp:
-		mat.set_shader_parameter(&"light_color", Color(0.62, 0.64, 0.7))
-		mat.set_shader_parameter(&"dark_color", Color(0.46, 0.48, 0.56))
+		mat.set_shader_parameter(&"light_color", Color(0.8, 0.83, 0.92))
+		mat.set_shader_parameter(&"dark_color", Color(0.58, 0.63, 0.78))
 		mat.set_shader_parameter(&"light_alpha", t.tfx_wisp_alpha)
 		mat.set_shader_parameter(&"dark_alpha", t.tfx_wisp_alpha)
 		# G4: the wisp is outlined as the plume is (the same ink, held on twos with the rest of the drawing), a thinner line.
