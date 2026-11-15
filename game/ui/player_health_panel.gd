@@ -110,7 +110,8 @@ func jolt_offset() -> Vector2:
 
 
 func _draw() -> void:
-	draw_set_transform(jolt_offset())
+	# Under the trailer profile the panel scales about the bottom-left corner it sits in and can be moved (hud_m7_scale, hud_m7_offset_*).
+	draw_set_transform(jolt_offset() + HudStyle.corner_offset(size, Vector2(0.0, 1.0)), 0.0, HudStyle.corner_scale())
 	# Leave room for the border and the drop shadow inside our rect.
 	var body := Rect2(Vector2(border + 2.0, border + 2.0), size - Vector2(border * 2.0 + 12.0, border * 2.0 + 12.0))
 	HudStyle.draw_panel(self, body, slant, HudStyle.PAPER, border)
@@ -143,10 +144,10 @@ func _draw_guard(area: Rect2, label_x: float) -> void:
 		flash = 0.5 + 0.5 * sin(_time * TAU * 6.0)
 	var label_color := HudStyle.INK.lerp(HudStyle.FINISHER_ACCENT, flash)
 	HudStyle.draw_text(self, Vector2(label_x, area.end.y + 1.0), "GUARD", 17, label_color)
-	var trough := HudStyle.TROUGH.lerp(HudStyle.FINISHER_ACCENT, flash)
-	draw_colored_polygon(HudStyle.slanted_quad(area.grow(3.0), slant), HudStyle.INK)
-	draw_colored_polygon(HudStyle.slanted_quad(area, slant), trough)
-	var shift := minf(slant * area.size.y, area.size.x * 0.5)
+	var trough := HudStyle.empty_tone().lerp(HudStyle.FINISHER_ACCENT, flash)
+	HudStyle.draw_slab(self, area, slant, trough, 3.0)
+	var fill_slant := HudStyle.slant_of(slant)
+	var shift := minf(fill_slant * area.size.y, area.size.x * 0.5)
 	var length := guard_gauge.value * (area.size.x - shift)
 	if length >= 0.5:
 		draw_colored_polygon(PackedVector2Array([
@@ -163,6 +164,5 @@ func _draw_pips(area: Rect2) -> void:
 	var pip_w := minf(22.0, (area.size.x - gap * float(pips_total - 1)) / float(pips_total))
 	for i: int in pips_total:
 		var pip := Rect2(area.position + Vector2(float(i) * (pip_w + gap), 0.0), Vector2(pip_w, area.size.y))
-		var color := HudStyle.DURABILITY if i < pips_filled else HudStyle.TROUGH
-		draw_colored_polygon(HudStyle.slanted_quad(pip.grow(2.0), 0.3), HudStyle.INK)
-		draw_colored_polygon(HudStyle.slanted_quad(pip, 0.3), color)
+		var color := HudStyle.DURABILITY if i < pips_filled else HudStyle.empty_tone()
+		HudStyle.draw_slab(self, pip, 0.3, color, 2.0)

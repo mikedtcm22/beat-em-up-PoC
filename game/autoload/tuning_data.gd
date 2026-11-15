@@ -1104,6 +1104,38 @@ extends Resource
 ## Real ticks the defender's rig flashes cyan on a perfect block (the parry flash).
 @export_range(0, 30, 1) var parry_flash_frames: int = 8
 
+@export_group("HUD (M7)")
+## The trailer look profile's HUD (Milestone 7, Phase 3, game/ui/hud_style.gd and the HUD parts): drawn comic caption boxes in the
+## same lettering as the cut-in cards (flat cream fill, a bold slightly uneven ink border, a hard offset drop shadow) and flat
+## ink-outlined bars with a hard-edged damage chunk that drops away. Read under look profile "trailer" only; the m6 HUD never reads them.
+## Flat colours: the caption box, the empty part of a bar, the ink (borders, lettering, shadows), the player's and the boss's bar, the damage chunk.
+@export var hud_m7_paper: Color = Color(0.98, 0.93, 0.78)
+@export var hud_m7_paper_shade: Color = Color(0.82, 0.75, 0.58)
+@export var hud_m7_ink: Color = Color(0.06, 0.05, 0.09)
+@export var hud_m7_health: Color = Color(1.0, 0.8, 0.14)
+@export var hud_m7_boss: Color = Color(0.72, 0.4, 0.95)
+@export var hud_m7_chunk: Color = Color(1.0, 0.5, 0.18)
+## The ink border's width (a multiplier on each element's own) and how far its edges stray from straight (px): the uneven hand-inked line.
+@export_range(0.5, 2.5, 0.05) var hud_m7_border_scale: float = 1.2
+@export_range(0.0, 5.0, 0.1) var hud_m7_wobble_px: float = 1.8
+## The hard drop shadow's offset (px, down and right) and the share of each element's slant kept (boxes sit nearly square).
+@export_range(0.0, 24.0, 0.5) var hud_m7_shadow_px: float = 8.0
+@export_range(0.0, 1.0, 0.05) var hud_m7_slant_scale: float = 0.25
+## A bar's ink outline (a multiplier on the element's own) and the offset (px) of the lettering's hard shadow.
+@export_range(0.5, 2.5, 0.05) var hud_m7_bar_outline_scale: float = 1.0
+@export_range(0.0, 8.0, 0.25) var hud_m7_text_shadow_px: float = 3.0
+## The damage chunk: it hangs where the lost health was for this long (s), then drops away over the fall time (s), by this many px, turning by this angle.
+@export_range(0.0, 1.5, 0.05) var hud_m7_chunk_hold_s: float = 0.3
+@export_range(0.1, 1.5, 0.05) var hud_m7_chunk_fall_s: float = 0.55
+@export_range(0.0, 300.0, 5.0) var hud_m7_chunk_drop_px: float = 110.0
+@export_range(0.0, 60.0, 1.0) var hud_m7_chunk_spin_deg: float = 22.0
+## The player's panel and the boss bar: their size (a multiplier, about the corner or edge they sit on) and an offset (px) from where they sit.
+@export_range(0.7, 1.4, 0.05) var hud_m7_scale: float = 1.0
+@export_range(-200.0, 200.0, 1.0) var hud_m7_offset_x: float = 0.0
+@export_range(-200.0, 200.0, 1.0) var hud_m7_offset_y: float = 0.0
+## The combat log (the HUD's debug line) shows from the start under the trailer profile; off, L still brings it up.
+@export var hud_m7_log_visible: bool = false
+
 @export_group("Sparring")
 ## Seconds from the start of one of a sparring dummy's jabs to the next (varied a little).
 @export_range(0.5, 10.0, 0.1) var sparring_interval_s: float = 2.0

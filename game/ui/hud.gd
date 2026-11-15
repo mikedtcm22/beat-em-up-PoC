@@ -47,6 +47,8 @@ var cut_in: CutIn
 var director: Node
 
 var _help_auto_hide_left: float = 0.0
+## The look the HUD last dressed for (true: the trailer profile's comic look, M7); -1 before the first time.
+var _comic_seen: int = -1
 
 
 func _ready() -> void:
@@ -84,6 +86,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Step every time-based part of the HUD by `delta` real seconds.
 func advance(delta: float) -> void:
 	_refresh_director()
+	_sync_look()
 	# The startup help and the over-head bars count game time: they keep their remaining
 	# seconds through a pause.
 	var game_delta := 0.0 if get_tree().paused else delta
@@ -109,6 +112,27 @@ func advance(delta: float) -> void:
 	go_cue.advance(game_delta)
 	# The drawn cards (trailer look only) count game time too, and go last: they hold the simulation while up.
 	cut_in.advance(game_delta)
+
+
+## When the look profile flips (and on the first frame) dress the parts that are not redrawn from the look every frame: under the
+## trailer profile the combat log, the HUD's debug line, starts away (L brings it back; hud_m7_log_visible keeps it up) and the help
+## overlay takes the caption box's hard shadow. Returning to m6 puts both back as they were by default.
+func _sync_look() -> void:
+	var comic := 1 if HudStyle.comic() else 0
+	if comic == _comic_seen:
+		return
+	_comic_seen = comic
+	combat_log.visible = comic == 0 or Tuning.data.hud_m7_log_visible
+	help_overlay.apply_look()
+	queue_redraw_parts()
+
+
+## Redraw every part that caches nothing (they draw each frame while visible; the rest are redrawn on their next event).
+func queue_redraw_parts() -> void:
+	for child: Node in get_children():
+		var item := child as CanvasItem
+		if item != null:
+			item.queue_redraw()
 
 
 ## Show the bottom-center boss bar for `actor` (the HUD shows it by itself for the live

@@ -46,8 +46,9 @@ func advance(delta: float) -> void:
 func _draw() -> void:
 	if boss == null or not is_instance_valid(boss):
 		return
+	draw_set_transform(HudStyle.corner_offset(size, Vector2(0.5, 1.0)), 0.0, HudStyle.corner_scale())
 	var name_text := boss.display_name if boss.display_name != "" else String(boss.name)
 	HudStyle.draw_text(self, Vector2(18.0, 28.0), name_text.to_upper(), 28, HudStyle.PAPER, 8)
 	var bar := Rect2(Vector2(border + 2.0, 42.0), Vector2(size.x - border * 2.0 - 12.0, size.y - 42.0 - border - 8.0))
-	HudStyle.draw_panel(self, bar, slant, HudStyle.TROUGH, border)
+	HudStyle.draw_panel(self, bar, slant, HudStyle.empty_tone(), border)
 	HudStyle.draw_gauge(self, bar, slant, gauge, HudStyle.BOSS, 0.0)
