@@ -1406,6 +1406,12 @@ extends Resource
 @export_range(0.0, 3.0, 0.05) var dusk_window_energy: float = 1.0
 ## A multiplier on the haze bands' strength on the roofs.
 @export_range(0.0, 3.0, 0.05) var dusk_haze_scale: float = 1.0
+## The roofs' practicals (DuskDeck: bulkhead lamps, skylights, the sign): a multiplier on their glow and halos, and on their painted pools'
+## opacity. Painted cards only; no real light.
+@export_range(0.0, 3.0, 0.05) var dusk_practical_energy: float = 1.0
+@export_range(0.0, 2.0, 0.05) var dusk_practical_pool_opacity: float = 1.0
+## A multiplier on the long shadow shapes laid on the roofs' deck (0: none).
+@export_range(0.0, 2.0, 0.05) var dusk_deck_shade_opacity: float = 1.0
 
 @export_group("Boss roof (M7)")
 ## The boss roof under the trailer look profile (BossroofFx, game/fx/bossroof_fx.gd; the area's colours and cards are BossroofLook, game/level/look/bossroof_look.tres): the
@@ -1415,12 +1421,14 @@ extends Resource
 ## A multiplier on the fire cloud's colours, and on its hot core (HDR: only the core blooms).
 @export_range(0.0, 3.0, 0.05) var bossroof_fire_energy: float = 1.0
 @export_range(0.0, 6.0, 0.1) var bossroof_core_energy: float = 2.0
-## How much of the wall's height the fire's columns reach.
-@export_range(0.1, 1.0, 0.01) var bossroof_fire_reach: float = 0.62
+## How much of the wall's height the tallest flame tongue reaches.
+@export_range(0.1, 1.0, 0.01) var bossroof_fire_reach: float = 0.78
 ## The street's flame cards at the foot of the wall: their energy.
 @export_range(0.0, 3.0, 0.05) var bossroof_flame_energy: float = 1.3
 ## The dark line round the flames and the fire is never thinner than this many pixels.
 @export_range(0.0, 6.0, 0.1) var bossroof_line_px: float = 2.0
+## A multiplier on the long flat shadow shapes laid on the boss roof's deck (0: none).
+@export_range(0.0, 2.0, 0.05) var bossroof_shade_opacity: float = 1.0
 ## The embers: how many drift over the roof (0: none), their size (m), how far they climb (m), how far they sway (m) and how long one lives (s).
 @export_range(0, 120, 1) var bossroof_embers: int = 64
 @export_range(0.02, 0.5, 0.01) var bossroof_ember_size_m: float = 0.32

@@ -99,6 +99,47 @@ func test_the_trailer_builds_the_roofs_dressing_and_the_dusk_sky() -> void:
 		assert_false((card as MeshInstance3D).visible, "the street's far plate is hidden from the roofs")
 
 
+func test_the_roofs_get_their_practicals_and_far_windows_under_the_trailer_only() -> void:
+	var level := await _build()
+	var roofs := level.sections[ROOFS]
+	var deck := roofs.get_node("DuskDeck") as DuskDeck
+	assert_false(deck.is_built(), "nothing under m6")
+	assert_eq(deck.get_child_count(), 0)
+	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
+	await _ticks(SETTLE_FRAMES)
+	var dusk := NightLook.for_location(&"roofs_dusk") as DuskLook
+	assert_true(deck.is_built())
+	assert_eq(deck.count(), dusk.practicals.size())
+	assert_true(dusk.practicals.size() >= 8, "bulkheads, skylights and a sign")
+	assert_true(deck.far_window_count() >= 20, "rows of windows on the far blocks (%d)" % deck.far_window_count())
+	assert_eq(deck.find_children("*", "OmniLight3D", true, false).size(), 0, "painted only: no real light")
+	for card: Node in deck.find_children("*", "MeshInstance3D", true, false):
+		assert_eq((card as MeshInstance3D).cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "%s casts no shadow" % card.name)
+	var lit_pools := 0
+	for node: Node in deck.get_children():
+		if String(node.name).begins_with("Pool"):
+			lit_pools += 1
+	assert_true(lit_pools >= 8, "a stepped pool under each bulkhead and skylight")
+	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
+	await _ticks(3)
+	assert_eq(deck.get_child_count(), 0, "flipping back frees it")
+
+
+func test_the_dusk_key_is_low_and_warm_and_the_deck_practicals_follow_the_tunables() -> void:
+	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
+	var dusk := NightLook.for_location(&"roofs_dusk") as DuskLook
+	var level := await _build()
+	await _go_to_roofs(level)
+	var deck := level.sections[ROOFS].get_node("DuskDeck") as DuskDeck
+	var head := deck.get_node("Head0") as MeshInstance3D
+	var base := (head.material_override as StandardMaterial3D).emission_energy_multiplier
+	Tuning.set_value(&"dusk_practical_energy", 2.0)
+	await _ticks(2)
+	head = deck.get_node("Head0") as MeshInstance3D
+	assert_almost_eq((head.material_override as StandardMaterial3D).emission_energy_multiplier, base * 2.0, 0.001, "the glow scales live")
+	assert_true(dusk.sun_elevation_deg < 30.0, "a low sun")
+
+
 func test_the_street_keeps_its_night_sky_and_far_plate() -> void:
 	var level := await _build()
 	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)

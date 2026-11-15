@@ -115,6 +115,29 @@ func test_the_trailer_flip_builds_the_dressing_and_back_frees_it() -> void:
 	assert_eq(level.sections[2].find_children("*", "OmniLight3D", true, false).size(), 0)
 
 
+func test_the_fire_is_flame_tongues_and_the_deck_has_shadow_shapes() -> void:
+	var level := await _build()
+	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
+	await _ticks(3)
+	var fx := _fx(level)
+	var row := NightLook.for_location(&"boss_roof") as BossroofLook
+	assert_eq(fx.counts().shades, row.shades.size(), "a flat shadow shape per entry")
+	assert_true(row.shades.size() >= 2, "shadow shapes either side of the lit lane")
+	var fire_mats := 0
+	for mat in fx.materials():
+		if mat.shader.resource_path == "res://game/fx/bossroof_fire.gdshader":
+			fire_mats += 1
+			assert_eq(mat.get_shader_parameter(&"layer_scales"), row.fire_layer_scales, "the nested tongues' scales are the look's")
+			assert_true(row.fire_layer_scales.x < 1.0 and row.fire_layer_scales.y < row.fire_layer_scales.x, "mid and core are smaller tongues of the same shape")
+	assert_true(fire_mats > 0)
+	for node: Node in fx.find_children("Shade*", "MeshInstance3D", true, false):
+		assert_eq((node as MeshInstance3D).cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+	assert_true(row.paint_rim_color.r > row.paint_rim_color.b, "the fire's warm rim on the figures, not the sky's cold one")
+	Tuning.set_value(&"bossroof_shade_opacity", 0.0)
+	await _ticks(2)
+	assert_eq(fx.counts().shades, 0, "zero builds none")
+
+
 func _look_streets(level: LevelRoot) -> int:
 	return (level.get_node("TrailerLook") as TrailerLook).streets().size()
 
@@ -187,5 +210,5 @@ func test_the_painted_characters_take_the_areas_rim_on_the_boss_roof() -> void:
 	_put_player_on_roof(level)
 	# The area colours follow the level's light blend into the section (M7 e-roofs): wait it out.
 	await _ticks(SETTLE_FRAMES + 4 + ceili(Tuning.data.section_light_blend_s * Engine.physics_ticks_per_second))
-	assert_eq(ToonMaterials._area_rim_color, roof.paint_rim_color, "the sky's cold rim on the boss roof")
+	assert_eq(ToonMaterials._area_rim_color, roof.paint_rim_color, "the fire's warm rim on the boss roof")
 	assert_eq(ToonMaterials._area_shadow_hue, roof.paint_shadow_hue)
