@@ -168,7 +168,7 @@ func _activate() -> void:
 		return
 	_swap_sky()
 	_apply_glow(base)
-	ToonMaterials.set_area_look(base.paint_shadow_hue, base.paint_rim_color)
+	ToonMaterials.set_area_look(base.paint_shadow_hue, base.paint_rim_color, lamp_key_color(base))
 	_area_from = base
 	_area_to = base
 	_area_t = -1.0
@@ -338,8 +338,22 @@ func _tick_area(here: NightLook) -> void:
 	_area_t = progress
 	var e := smoothstep(0.0, 1.0, clampf(progress, 0.0, 1.0))
 	ToonMaterials.set_area_look(_area_from.paint_shadow_hue.lerp(_area_to.paint_shadow_hue, e),
-			_area_from.paint_rim_color.lerp(_area_to.paint_rim_color, e))
+			_area_from.paint_rim_color.lerp(_area_to.paint_rim_color, e), lamp_key_color(_area_from).lerp(lamp_key_color(_area_to), e))
 	_apply_haze_scale()
+
+
+## The colour of `look`'s brightest lamp (the street's sodium lamps, the boss roof's fire), alpha 1; alpha 0 for a look with no lamp. ToonMaterials.rim_for() lets
+## it replace a cold rim colour, so a figure's rim follows the light of its section.
+static func lamp_key_color(look: NightLook) -> Color:
+	var key := Color(0.0, 0.0, 0.0, 0.0)
+	if look == null:
+		return key
+	var top := 0.0
+	for lamp: NightLamp in look.lamps:
+		if lamp != null and lamp.energy > top:
+			top = lamp.energy
+			key = Color(lamp.color.r, lamp.color.g, lamp.color.b, 1.0)
+	return key
 
 
 static func _scaled(color: Color, factor: float) -> Color:

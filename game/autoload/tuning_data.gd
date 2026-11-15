@@ -1457,6 +1457,8 @@ extends Resource
 @export var look_paint_shadow_hue: Color = Color(0.24, 0.24, 0.55)
 ## How far the shadow tone moves toward that hue, brightness kept.
 @export_range(0.0, 1.0, 0.01) var look_paint_shadow_hue_amount: float = 0.25
+## The most an area's tint may pull a figure's paint: caps the shadow hue's amount and the light's hue kept, so a figure keeps its local colour under any sky.
+@export_range(0.0, 1.0, 0.01) var look_paint_area_tint_max: float = 0.2
 ## The terminator's edge width in pixels at 1080p, never narrower (a shadow map's stair-steps are inside it).
 @export_range(0.0, 12.0, 0.1) var look_paint_term_soft_px: float = 3.0
 ## A directional light lights a painted surface at no less than this share of full, in its hue: a dim night moon never drops the paint to black.
@@ -1488,6 +1490,18 @@ extends Resource
 @export_range(0.0, 2.0, 0.01) var look_paint_rim_strength: float = 0.9
 @export_range(0.5, 12.0, 0.1) var look_paint_rim_px: float = 2.5
 @export_range(0.0, 1.0, 0.01) var look_paint_rim_key: float = 0.15
+## The rim follows the section's key: an area whose rim colour is cold (its blue above its red: the boss roof's sky) while warm lamps light it (its fire) takes its
+## brightest lamp's colour instead (1 = on, 0 = the area's own colour, whatever it is).
+@export_range(0, 1, 1) var look_paint_rim_follow_lamps: int = 1
+## A large form near the lens (a forearm) takes a thinner rim: inside this many metres of the lens its width falls toward `look_paint_rim_near_gain` of itself, full at twice the distance (0 = off).
+@export_range(0.0, 3.0, 0.05) var look_paint_rim_near_m: float = 1.2
+@export_range(0.05, 1.0, 0.01) var look_paint_rim_near_gain: float = 0.12
+@export_subgroup("Hit flash")
+## The contact hit flash under the trailer profile: 1 = a hard-edged flat shape (a flat light tone out to `look_paint_flash_hard_share` of hit_flash_radius_m, then nothing),
+## 0 = m6's soft radial fall-off. `look_paint_flash_hard_alpha` is the flat tone's opacity: under 1 the face and its ink show through the flash.
+@export_range(0, 1, 1) var look_paint_flash_hard: int = 1
+@export_range(0.2, 1.0, 0.01) var look_paint_flash_hard_share: float = 0.7
+@export_range(0.1, 1.0, 0.01) var look_paint_flash_hard_alpha: float = 0.62
 @export_subgroup("Hull")
 ## The painted hull's line, a multiplier on look_outline_px: near the lens it is this much heavier (at look_outline_near_m), back to 1 by
 ## boost_to_m, then from thin_from_m out to look_outline_far_m thinning to far_gain.
@@ -1537,20 +1551,22 @@ extends Resource
 ## A figure's contact shadow under the trailer profile: 1 = one soft dark blob (no noise, no hard core), 0 = the drawn two-value shape with a broken edge (props keep that).
 @export_range(0.0, 1.0, 0.01) var look_paint_contact_soft: float = 1.0
 @export_subgroup("Damage marks (D1)")
-## The damage marks under the trailer profile (m6 keeps its soft tiles): a few small, hard-edged, flat shapes on SKIN only, drawn under the ink; none on cloth or
-## gloves except the blood's spots. `look_paint_bruise_density` is the tile's tiles per metre against vfx_damage_tile_m (higher = smaller shapes, fewer on a face),
+## The damage marks under the trailer profile (m6 keeps its soft tiles): bold, flat, hard-edged shapes at the M6 tiles' size and coverage (the owner must see
+## each hit land), on skin and the blood's splats on cloth, with an ink edge, drawn under the ink line so the face drawing stays readable.
+## `look_paint_bruise_density` is the tile's tiles per metre against vfx_damage_tile_m (1 = M6's size; higher = smaller shapes, fewer on a face),
 ## `look_paint_bruise_cut` the tile alpha above which a shape is drawn (a hard edge, no translucent wash), `look_paint_bruise_keep` the share of shapes kept
-## (a noise gate over object-space cells of `look_paint_bruise_cells` per metre).
-@export_range(0.5, 8.0, 0.05) var look_paint_bruise_density: float = 4.0
-@export_range(0.05, 0.99, 0.01) var look_paint_bruise_cut: float = 0.8
-@export_range(0.0, 1.0, 0.01) var look_paint_bruise_keep: float = 0.68
+## (a noise gate over object-space cells of `look_paint_bruise_cells` per metre; 1 = all), `look_paint_mark_ink_px` the width of the ink edge in pixels at 1080p.
+@export_range(0.5, 8.0, 0.05) var look_paint_bruise_density: float = 1.0
+@export_range(0.05, 0.99, 0.01) var look_paint_bruise_cut: float = 0.5
+@export_range(0.0, 1.0, 0.01) var look_paint_bruise_keep: float = 1.0
 @export_range(1.0, 40.0, 0.5) var look_paint_bruise_cells: float = 7.0
-## A bruise's colour: the skin paint darkened (`look_paint_bruise_darken`, a share of its value) and pulled toward a muted maroon by `look_paint_bruise_hue_amount`,
-## luminance kept. Blood stays a flat dark red.
-@export_range(0.1, 1.0, 0.01) var look_paint_bruise_darken: float = 0.4
-@export var look_paint_bruise_hue: Color = Color(0.34, 0.12, 0.15)
-@export_range(0.0, 1.0, 0.01) var look_paint_bruise_hue_amount: float = 0.45
-@export var look_paint_blood_color: Color = Color(0.45, 0.06, 0.08)
+@export_range(0.0, 6.0, 0.1) var look_paint_mark_ink_px: float = 1.6
+## A bruise's colour: the skin paint darkened (`look_paint_bruise_darken`, a share of its value) and pulled toward a flat purple-maroon by `look_paint_bruise_hue_amount`,
+## luminance kept. Blood is a flat red.
+@export_range(0.1, 1.0, 0.01) var look_paint_bruise_darken: float = 0.5
+@export var look_paint_bruise_hue: Color = Color(0.36, 0.16, 0.27)
+@export_range(0.0, 1.0, 0.01) var look_paint_bruise_hue_amount: float = 0.85
+@export var look_paint_blood_color: Color = Color(0.70, 0.06, 0.09)
 @export_subgroup("Frame finish (G1)")
 ## The trailer's frame finish, 1 = on, 0 = the plain edge pass and the full 3D resolution (the A/B). It reads no screen copy (that cost about 3 ms): the
 ## 3D view renders at `look_finish_scale` of the window and is upscaled bilinearly (the trailer is soft, like video; the HUD stays sharp, and the

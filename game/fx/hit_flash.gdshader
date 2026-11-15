@@ -19,6 +19,11 @@ shader_type spatial;
 // viewport), so the simulation never reads a camera. 0 = off (today's flash, to the last bit).
 render_mode unshaded, blend_mix, depth_draw_never, cull_back, shadows_disabled;
 
+// Under the trailer profile (M7 x-shader) the flash is a hard-edged flat shape, not a glow: the global `paint_flash_hard` is (x the share of flash_radius the shape
+// covers, y its opacity) while the trailer look is on, (0, 1) under m6 (the soft radial above, to the last bit). The shape's edge is one pixel wide; a flat tone
+// under full opacity leaves the face and its ink readable through it.
+global uniform vec2 paint_flash_hard;
+
 // Set from Tuning by the struck actor (CombatActor._flash_at()): world-space contact point,
 // radius (m), the share of it at full strength (0..1), strength (0..1) and color.
 uniform vec3 flash_point = vec3(0.0);
@@ -83,7 +88,15 @@ void fragment() {
 		vec3 point = (VIEW_MATRIX * vec4(flash_point, 1.0)).xyz;
 		dist = cap_distance(VERTEX, point, abs(PROJECTION_MATRIX[1][1]), VIEWPORT_SIZE.x / VIEWPORT_SIZE.y);
 	}
-	float alpha = clamp(flash_strength, 0.0, 1.0) * falloff(dist, flash_radius);
+	float shape = falloff(dist, flash_radius);
+	float opacity = 1.0;
+	if (paint_flash_hard.x > 0.0) {
+		float edge = max(fwidth(dist), 0.0001);
+		float reach = flash_radius * paint_flash_hard.x;
+		shape = 1.0 - smoothstep(reach - edge, reach + edge, dist);
+		opacity = paint_flash_hard.y;
+	}
+	float alpha = clamp(flash_strength, 0.0, 1.0) * shape * opacity;
 	if (alpha <= 0.0) {
 		discard;
 	}

@@ -67,6 +67,10 @@ uniform float paint_rim_strength : hint_range(0.0, 2.0) = 0.9;
 // The rim's width in pixels at 1080p, measured inward from the silhouette; the key side only: the key's facing must pass paint_rim_key.
 uniform float paint_rim_px : hint_range(0.5, 12.0) = 2.5;
 uniform float paint_rim_key : hint_range(0.0, 1.0) = 0.15;
+// A large form near the lens (a forearm) is a band, not a line, whatever width the estimate reads: inside paint_rim_near_m of the lens the rim's width
+// falls toward paint_rim_near_gain of itself (full at 2x that distance). 0 = off.
+uniform float paint_rim_near_m : hint_range(0.0, 3.0) = 0.0;
+uniform float paint_rim_near_gain : hint_range(0.05, 1.0) = 1.0;
 uniform float paint_rim_patch_cells : hint_range(1.0, 30.0) = 4.5;
 uniform float paint_rim_patch_cut : hint_range(0.0, 1.0) = 0.62;
 // Large dark forms (a vest, a black top): the rim's estimated width is only as good as the form is round, and on a big form it reads as a band, so
@@ -103,6 +107,8 @@ uniform float bruise_darken : hint_range(0.1, 1.0) = 0.4;
 uniform vec3 bruise_hue : source_color = vec3(0.34, 0.12, 0.15);
 uniform float bruise_hue_amount : hint_range(0.0, 1.0) = 0.45;
 uniform vec3 blood_color : source_color = vec3(0.45, 0.06, 0.08);
+// The width in pixels at 1080p of the ink edge round each mark (0 = none): a flat shape with a drawn edge, like the rest of the figure.
+uniform float mark_ink_px : hint_range(0.0, 6.0) = 1.6;
 // Placed marks (M7 r0): a character whose art carries a mark map (metadata/marks_tex, on UV2; ToonMaterials.painted() sets marks_on) shows its skin damage as
 // two or three designed shapes, not the tile's scatter: R a bruise shown from the bruised look up, G a bruise shown from the bloodied look, B a flat blood shape
 // shown from the bloodied look. damage_level is DamageLook.Level (0 clean, 1 bruised, 2 bloodied), written by DamageLook.apply_art().
@@ -117,6 +123,7 @@ varying float swatch_glint;
 varying float glint_gate;
 varying float rim_patch;
 varying float rim_dark;
+varying float view_depth;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
@@ -126,6 +133,7 @@ vec4 damage_triplanar(sampler2D tex, vec3 p, vec3 w, vec3 dpdx, vec3 dpdy) {
 }
 
 void vertex() {
+	view_depth = -(MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).z;
 	if (use_rest_custom) {
 		mark_pos = CUSTOM0.xyz;
 		mark_normal = CUSTOM1.xyz;
@@ -185,6 +193,7 @@ void fragment() {
 		vec3 tone = color * bruise_darken;
 		float maroon_luma = max(dot(bruise_hue, LUMA), 0.001);
 		vec3 bruise = mix(tone, bruise_hue * (dot(tone, LUMA) / maroon_luma), bruise_hue_amount);
+		float to_px = max(VIEWPORT_SIZE.y / 1080.0, 0.001);
 		if (marks_on > 0.5 && skin_marks > 0.5) {
 			// The placed shapes: each channel is a soft ramp baked on UV2, cut at one half with a one-pixel edge, so the shape is crisp at any size.
 			vec3 m = texture(marks_tex, UV2).rgb;
@@ -198,7 +207,13 @@ void fragment() {
 			float bl_on = smoothstep(0.5 - bl_edge, 0.5 + bl_edge, bl_cut);
 			color = mix(color, bruise, b_on * takes_marks);
 			color = mix(color, blood_color, bl_on * takes_marks);
-		} else {
+			// The ink edge: a few pixels just inside each shape, so a mark belongs to the drawn look (the distance to the cut in pixels is the ramp's height over its slope).
+			float b_ring = b_on * (1.0 - smoothstep(mark_ink_px - 0.5, mark_ink_px + 0.5, (b_cut - 0.5) / (2.0 * b_edge) / to_px));
+			float bl_ring = bl_on * (1.0 - smoothstep(mark_ink_px - 0.5, mark_ink_px + 0.5, (bl_cut - 0.5) / (2.0 * bl_edge) / to_px));
+			color = mix(color, mix(color, ink, 0.85), max(b_ring, bl_ring) * takes_marks * step(0.01, mark_ink_px));
+		}
+		// The tiles' shapes, at the M6 size and coverage: on a figure with placed marks they add the splats and bruises of its arms and clothes.
+		{
 		vec3 w = abs(normalize(mark_normal));
 		w /= max(w.x + w.y + w.z, 0.0001);
 		vec3 p = mark_pos * damage_scale * bruise_density;
@@ -219,6 +234,8 @@ void fragment() {
 		float mark_edge = max(0.5 * fwidth(shape), 0.0001);
 		float on = smoothstep(bruise_cut - mark_edge, bruise_cut + mark_edge, shape) * keep;
 		color = mix(color, mix(bruise, blood_color, bloody), on * takes_marks);
+		float ring = on * (1.0 - smoothstep(mark_ink_px - 0.5, mark_ink_px + 0.5, (shape - bruise_cut) / (2.0 * mark_edge) / to_px));
+		color = mix(color, mix(color, ink, 0.85), ring * takes_marks * step(0.01, mark_ink_px));
 		}
 	}
 	color = mix(color, ink, line);
@@ -261,6 +278,9 @@ void light() {
 		float to_edge_px = 0.5 * u / max(fwidth(u), 0.0001) / max(to_pixels, 0.001);
 		float facing = dot(n, normalize(LIGHT));
 		float rim_px = paint_rim_dark_px > 0.0 ? mix(paint_rim_px, min(paint_rim_px, paint_rim_dark_px), rim_dark) : paint_rim_px;
+		if (paint_rim_near_m > 0.0) {
+			rim_px *= mix(paint_rim_near_gain, 1.0, smoothstep(paint_rim_near_m, 2.0 * paint_rim_near_m, view_depth));
+		}
 		float rim = (1.0 - smoothstep(rim_px - 0.5, rim_px + 0.5, to_edge_px)) * smoothstep(paint_rim_key - 0.1, paint_rim_key + 0.1, facing) * rim_patch;
 		SPECULAR_LIGHT += paint_rim_color * paint_rim_strength * rim;
 	} else {
