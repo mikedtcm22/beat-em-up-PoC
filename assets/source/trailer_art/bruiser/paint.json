@@ -1,0 +1,423 @@
+{
+ "seed": 21,
+ "layout": {
+  "weights": {
+   "Head": 2.4,
+   "Neck": 1.2,
+   "LeftHand": 1.4,
+   "RightHand": 1.4
+  },
+  "default_weight": 1.0,
+  "margin_px": 12,
+  "planar_front": {
+   "bones": [
+    "Head"
+   ],
+   "min_ny": 0.45
+  }
+ },
+ "regions": {
+  "purple": {
+   "base": [
+    92,
+    70,
+    122
+   ],
+   "shade": [
+    62,
+    48,
+    92
+   ]
+  },
+  "helmet": {
+   "base": [
+    84,
+    64,
+    112
+   ],
+   "shade": [
+    52,
+    40,
+    80
+   ],
+   "shadow": 0.0
+  },
+  "mask": {
+   "base": [
+    78,
+    58,
+    106
+   ],
+   "shade": [
+    52,
+    38,
+    82
+   ],
+   "shadow": 0.0
+  },
+  "armour": {
+   "base": [
+    100,
+    110,
+    138
+   ],
+   "shade": [
+    68,
+    76,
+    106
+   ]
+  },
+  "visor": {
+   "base": [
+    100,
+    110,
+    138
+   ],
+   "shade": [
+    68,
+    76,
+    106
+   ],
+   "shadow": 0.0
+  },
+  "brow": {
+   "base": [
+    72,
+    80,
+    110
+   ],
+   "shade": [
+    46,
+    52,
+    80
+   ],
+   "shadow": 0.0
+  },
+  "dark": {
+   "base": [
+    34,
+    30,
+    46
+   ],
+   "shade": [
+    20,
+    18,
+    30
+   ]
+  },
+  "belt": {
+   "base": [
+    188,
+    176,
+    152
+   ],
+   "shade": [
+    124,
+    112,
+    104
+   ]
+  },
+  "skin": {
+   "base": [
+    206,
+    152,
+    118
+   ],
+   "shade": [
+    150,
+    100,
+    84
+   ],
+   "class": 204,
+   "shadow": 0.0
+  }
+ },
+ "rules": [
+  {
+   "cells": [
+    44
+   ],
+   "region": "purple"
+  },
+  {
+   "cells": [
+    47
+   ],
+   "region": "purple"
+  },
+  {
+   "cells": [
+    45
+   ],
+   "region": "armour"
+  },
+  {
+   "cells": [
+    46
+   ],
+   "region": "dark"
+  },
+  {
+   "cells": [
+    14
+   ],
+   "region": "belt"
+  },
+  {
+   "cells": [
+    14
+   ],
+   "bones": [
+    "LeftLowerArm",
+    "RightLowerArm"
+   ],
+   "region": "skin"
+  },
+  {
+   "cells": [
+    47
+   ],
+   "bones": [
+    "Head",
+    "Neck"
+   ],
+   "region": "helmet"
+  },
+  {
+   "cells": [
+    44
+   ],
+   "bones": [
+    "Neck",
+    "Head"
+   ],
+   "region": "mask"
+  },
+  {
+   "cells": [
+    45
+   ],
+   "bones": [
+    "Head"
+   ],
+   "region": "visor"
+  },
+  {
+   "cells": [
+    45
+   ],
+   "bones": [
+    "Head"
+   ],
+   "box": [
+    null,
+    [
+     0.04,
+     1.0
+    ],
+    [
+     1.634,
+     1.7
+    ]
+   ],
+   "region": "brow"
+  }
+ ],
+ "shadows": {
+  "hint": [],
+  "designed": [
+   {
+    "region": [
+     "mask"
+    ],
+    "shape": {
+     "at_mm": [
+      0,
+      108
+     ],
+     "r_mm": [
+      110,
+      46
+     ],
+     "depth_mm": 80,
+     "soft": 0.1,
+     "wobble": 0.05,
+     "wobble_mm": 30
+    }
+   },
+   {
+    "region": [
+     "mask"
+    ],
+    "shape": {
+     "at_mm": [
+      0,
+      200
+     ],
+     "r_mm": [
+      84,
+      40
+     ],
+     "depth_mm": 90,
+     "soft": 0.1
+    }
+   }
+  ],
+  "wobble_px": 70,
+  "wobble_gain": 0.16,
+  "shadow_cut": 0.42,
+  "edge": 0.035,
+  "fold_pct": 6.0,
+  "fold_amount": 0.0,
+  "form_sigma": 3.0,
+  "blur_px": 20,
+  "cavity": 0.3,
+  "hatch": []
+ },
+ "ink": {
+  "border_px": 3,
+  "border_strength": 0.95,
+  "crease_strength": 0.6,
+  "crease_skip_bones": [
+   "Head",
+   "Neck",
+   "LeftUpperLeg",
+   "RightUpperLeg",
+   "LeftLowerLeg",
+   "RightLowerLeg"
+  ],
+  "warp_px": 0.0,
+  "crease_min": 5.0,
+  "crease_full": 8.0
+ },
+ "hull": {
+  "base": 0.62,
+  "variation": 0.3,
+  "noise_m": 0.18,
+  "taper_ends": [
+   "LeftToes",
+   "RightToes"
+  ],
+  "taper": 0.45,
+  "taper_m": 0.07
+ },
+ "folds": [
+  {
+   "bones": [
+    "Neck",
+    "Head"
+   ],
+   "region": "mask",
+   "count": 3,
+   "angle_deg": 78,
+   "angle_spread_deg": 14,
+   "length_mm": [
+    40,
+    80
+   ],
+   "width_mm": 4.6,
+   "strength": 0.95
+  },
+  {
+   "bones": [
+    "LeftUpperArm",
+    "LeftLowerArm"
+   ],
+   "region": "purple",
+   "count": 3,
+   "angle_deg": 38,
+   "angle_spread_deg": 12,
+   "length_mm": [
+    60,
+    110
+   ],
+   "width_mm": 5.0,
+   "strength": 0.95
+  },
+  {
+   "bones": [
+    "RightUpperArm",
+    "RightLowerArm"
+   ],
+   "region": "purple",
+   "count": 3,
+   "angle_deg": 38,
+   "angle_spread_deg": 12,
+   "length_mm": [
+    60,
+    110
+   ],
+   "width_mm": 5.0,
+   "strength": 0.95
+  },
+  {
+   "bones": [
+    "Hips"
+   ],
+   "region": "purple",
+   "count": 3,
+   "angle_deg": 80,
+   "angle_spread_deg": 20,
+   "length_mm": [
+    50,
+    100
+   ],
+   "width_mm": 5.0,
+   "strength": 0.95
+  }
+ ],
+ "grain": 0.0,
+ "normals": [
+  {
+   "bones": [
+    "LeftUpperArm",
+    "RightUpperArm",
+    "LeftShoulder",
+    "RightShoulder"
+   ],
+   "rings": 8,
+   "strength": 0.85
+  },
+  {
+   "bones": [
+    "LeftUpperLeg",
+    "RightUpperLeg",
+    "LeftLowerLeg",
+    "RightLowerLeg"
+   ],
+   "rings": 10,
+   "strength": 1.0
+  }
+ ],
+ "sheets": {
+  "groups": {
+   "body": {
+    "views": [
+     "body_front",
+     "body_back"
+    ],
+    "bones": "all",
+    "not_bones": [
+     "Head",
+     "Neck",
+     "LeftHand",
+     "RightHand"
+    ],
+    "ink_grow_mm": 0.8,
+    "min_line_mm2": 150,
+    "ink_cut": 0.5,
+    "edge_cut_mm": 6.0,
+    "power": 6,
+    "ink_regions": [
+     "purple",
+     "armour",
+     "dark",
+     "belt"
+    ],
+    "ink_margin_mm": 2.0,
+    "tones": {},
+    "abs_dark_lum": 0.0
+   }
+  }
+ }
+}
