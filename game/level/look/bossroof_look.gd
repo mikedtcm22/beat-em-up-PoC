@@ -8,7 +8,7 @@ extends NightLook
 @export_group("Fire wall")
 ## The cards of the far dressing: fire walls and skyline plates.
 @export var walls: Array[BossroofWall] = []
-## The cloud's tones from the outside in: the smoke over it, the outer sheet, the red, the orange and the hot core (the core is HDR).
+## The fire's tones from the outside in: the smoke over it, the dark band just inside the ink line, the red body, the orange and the hot core (the core is HDR).
 @export var smoke_color: Color = Color(0.14, 0.05, 0.14)
 @export var smoke_inner_color: Color = Color(0.3, 0.07, 0.15)
 @export var fire_outer_color: Color = Color(0.5, 0.09, 0.08)
@@ -16,8 +16,16 @@ extends NightLook
 @export var fire_orange_color: Color = Color(1.0, 0.5, 0.1)
 @export var fire_core_color: Color = Color(1.0, 0.84, 0.4)
 @export var fire_line_color: Color = Color(0.13, 0.025, 0.07)
-## How deep each inner tone starts inside the fire's edge, as a share of the wall's height.
-@export var fire_depth_shares: Vector3 = Vector3(0.025, 0.06, 0.11)
+## The middle and the core tongue as a share of the outer tongue's size (each tone is the same tongue, smaller).
+@export var fire_layer_scales: Vector2 = Vector2(0.72, 0.42)
+
+@export_group("Deck shade")
+## The long flat shadow shapes the fence and bulkhead throw across the deck toward the player (DuskLamp, kind SHADE: position, yaw, size),
+## and their colour (alpha is the strength) and the lighter step along their edge. They darken the floor round the lit lane in front of the
+## door, so the figure standing in it is the brightest warm shape.
+@export var shades: Array[DuskLamp] = []
+@export var shade_color: Color = Color(0.1, 0.02, 0.1, 0.62)
+@export var shade_edge_color: Color = Color(0.2, 0.05, 0.12, 0.34)
 
 @export_group("Skyline")
 @export var plate_body_color: Color = Color(0.1, 0.045, 0.12)

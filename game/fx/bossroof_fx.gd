@@ -14,6 +14,9 @@ const FIRE_SHADER := preload("res://game/fx/bossroof_fire.gdshader")
 const PLATE_SHADER := preload("res://game/fx/bossroof_plate.gdshader")
 const FLAME_SHADER := preload("res://game/fx/street_flame.gdshader")
 const EMBER_SHADER := preload("res://game/fx/street_ember.gdshader")
+const SHADE_SHADER := preload("res://game/fx/dusk_shade.gdshader")
+## A deck shadow card lies this far above the deck (m).
+const SHADE_LIFT_M := 0.02
 ## The embers' random spread is seeded, so every run draws the same ones.
 const EMBER_SEED := 7
 ## A kit skyline face's card lies this far in front of the face (m).
@@ -29,6 +32,7 @@ var _flame_mats: Array[ShaderMaterial] = []
 var _ember_mat: ShaderMaterial
 var _plate_count: int = 0
 var _face_count: int = 0
+var _shade_count: int = 0
 var _ember_count: int = 0
 ## The fire's lamps, pools and the like (NightStreet, built from the look's lamps): TrailerLook leaves this section's to this node.
 var _street: NightStreet
@@ -79,7 +83,7 @@ func is_built() -> bool:
 
 ## What is built: fire walls, flame cards, plates, block faces, embers (tests).
 func counts() -> Dictionary:
-	return {"fire": _fire_mats.size(), "flames": _flame_mats.size(), "plates": _plate_count, "faces": _face_count, "embers": _ember_count}
+	return {"fire": _fire_mats.size(), "flames": _flame_mats.size(), "plates": _plate_count, "faces": _face_count, "embers": _ember_count, "shades": _shade_count}
 
 
 ## The drawing the effects show now.
@@ -118,6 +122,7 @@ func refresh() -> void:
 	_street.build(_section, _look)
 	if _look.cover_blocks:
 		_build_faces()
+	_build_shades()
 	_build_embers()
 	_built = true
 	set_physics_process(true)
@@ -188,6 +193,7 @@ func _clear() -> void:
 	_matte_retry = 0
 	_plate_count = 0
 	_face_count = 0
+	_shade_count = 0
 	_ember_count = 0
 	_built = false
 	set_physics_process(false)
@@ -216,7 +222,7 @@ func _build_fire(wall: BossroofWall, index: int) -> void:
 	mat.set_shader_parameter(&"line_color", _look.fire_line_color)
 	mat.set_shader_parameter(&"seed", wall.seed)
 	mat.set_shader_parameter(&"card_m", wall.size_m)
-	mat.set_shader_parameter(&"depth_shares", _look.fire_depth_shares)
+	mat.set_shader_parameter(&"layer_scales", _look.fire_layer_scales)
 	mat.set_shader_parameter(&"energy", t.bossroof_fire_energy)
 	mat.set_shader_parameter(&"core_energy", t.bossroof_core_energy)
 	mat.set_shader_parameter(&"reach", t.bossroof_fire_reach)
@@ -307,6 +313,34 @@ func _build_faces() -> void:
 			node.rotation.y = 0.0 if toward_z > 0.0 else PI
 		count += 1
 	_face_count = count
+
+
+## The long flat shadow shapes on the deck (BossroofLook.shades): two hard-edged tones, drawn over the deck, no shadow caster.
+func _build_shades() -> void:
+	var opacity := Tuning.data.bossroof_shade_opacity
+	var count := 0
+	for lamp in _look.shades:
+		if lamp == null or opacity <= 0.0:
+			continue
+		var mat := ShaderMaterial.new()
+		mat.shader = SHADE_SHADER
+		mat.set_shader_parameter(&"shade_color", _look.shade_color)
+		mat.set_shader_parameter(&"edge_color", _look.shade_edge_color)
+		mat.set_shader_parameter(&"card_m", lamp.size_m)
+		mat.set_shader_parameter(&"seed", lamp.seed)
+		mat.set_shader_parameter(&"opacity", opacity)
+		var plane := PlaneMesh.new()
+		plane.size = lamp.size_m
+		var node := MeshInstance3D.new()
+		node.name = "Shade%d" % count
+		node.mesh = plane
+		node.material_override = mat
+		node.position = Vector3(lamp.position.x, lamp.floor_y + SHADE_LIFT_M, lamp.position.z)
+		node.rotation.y = deg_to_rad(lamp.yaw_deg)
+		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(node)
+		count += 1
+	_shade_count = count
 
 
 func _build_embers() -> void:
