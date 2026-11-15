@@ -4,6 +4,14 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-15 (Gate 4): M7 is with Game-boy for sign-off
+
+- **State:** T40 to T56 are done. `m7/trailer-look` holds everything: the comic look as the default (F7 shows M6), five enemies, street, dusk roofs, boss roof, rooms, 13 cut-in cards, comic HUD. Suite 2309/2309. The M7 pull request is open against `main`. **Do not merge it until Game-boy signs off.**
+- **Review:** 23 confirmed findings; 16 cured, 7 partly (list in docs/milestones/M7-comic-3d.md, "Result").
+- **Frame time (open, his call):** CPU work +2% street, +3% roofs, +12% boss roof against M6; wall frame +15/+20/+25%, 2 to 4% of frames miss a refresh (M6 0.2 to 0.4%), measured with the GPU 93 to 99% busy with other processes. Table: `captures/m7-comic/final/perf.txt`.
+- **Waiting on Game-boy:** plays Mission 1 (`godot --path .`), then signs off, or names what to fix. Sent in chat and by Slack DM: `captures/m7-comic/final/reel_mission1.mp4`, `sheet.jpg`, `captures/m7-comic/final_cards_sheet.jpg`.
+- **Resume:** on sign-off, merge the pull request and log T57 `pass`. On fixes, run them as one more wave from `m7/trailer-look` (plan Log must note the extra wave). Nothing is running; all `m7/x-*` and `m7/t53` branches are merged and their worktrees can be removed.
+
 ### 2026-11-15 (T55 done): fix wave merged, suite green, final perf and recordings in `captures/m7-comic/final/`
 - `m7/trailer-look` at ed87ec4 has t53 and all six fix branches merged, default.json regenerated (d71626e), and the LookProfile.data() reload fix (ed87ec4: the +1 ms physics cost).
 - **Suite:** 2309 of 2309 passed, 670 s, no SCRIPT or SHADER ERROR (`final/suite.log`).

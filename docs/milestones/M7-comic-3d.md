@@ -51,7 +51,7 @@ The new look becomes the default and M6 stays on F7 (T53), after Gate 3 and the 
 
 **Tests.** 2309 of 2309 pass (about 670 s on the shared machine).
 
-**Review.** 23 confirmed findings: 15 cured, 7 partly.
+**Review.** 23 confirmed findings: 16 cured, 7 partly.
 
 **Open points.**
 - Bruises read soft pink.
