@@ -28,6 +28,10 @@ const LUT_PATH := "res://assets/export/look/grade_lut.png"
 const DEPTH_ONLY_DEFINE := "#define EDGE_DEPTH_ONLY\n"
 ## Prepended for the trailer profile's finish (M7 G1): the pass also softens, wobbles and grains the frame (edge_pass.gdshader).
 const FINISH_DEFINE := "#define EDGE_FINISH\n"
+## Prepended after FINISH_DEFINE while the finish has nothing to do (grain, wobble and line break all zero, the trailer's default): the pass
+## drops the finish code and its uniforms altogether, and skips the pixels that have no line (M7 D2: the finish's branches cost 0.5 ms or more at
+## full scale even at zero).
+const QUIET_DEFINE := "#define EDGE_FINISH_QUIET\n"
 ## Just above the contact flash (Material.RENDER_PRIORITY_MIN), below every comic sprite.
 const EDGE_RENDER_PRIORITY := Material.RENDER_PRIORITY_MIN + 1
 ## The quad is never culled: it is a screen, not a thing in the world.
@@ -40,7 +44,7 @@ const BYTE_MAX := 255.0
 enum AaMode { MSAA_4X, FXAA, OFF }
 
 static var _depth_only_shader: Shader
-static var _finish_shaders: Dictionary[bool, Shader] = {}
+static var _finish_shaders: Dictionary[int, Shader] = {}
 
 var _quad: MeshInstance3D
 var _material: ShaderMaterial
@@ -170,13 +174,21 @@ static func depth_only_shader() -> Shader:
 	return _depth_only_shader
 
 
-## The edge shader with the finish on (M7 G1), with or without the depth-only fallback.
-static func finish_shader(depth_only: bool = false) -> Shader:
-	if not _finish_shaders.has(depth_only):
+## The edge shader with the finish on (M7 G1), with or without the depth-only fallback. With `quiet` (by default: whenever the tuned grain, wobble and
+## line break are all zero) it is the variant that carries none of the finish's code (see QUIET_DEFINE).
+static func finish_shader(depth_only: bool = false, quiet: bool = finish_is_quiet()) -> Shader:
+	var key := (1 if depth_only else 0) + (2 if quiet else 0)
+	if not _finish_shaders.has(key):
 		var shader := Shader.new()
-		shader.code = FINISH_DEFINE + (DEPTH_ONLY_DEFINE if depth_only else "") + EDGE_SHADER.code
-		_finish_shaders[depth_only] = shader
-	return _finish_shaders[depth_only]
+		shader.code = FINISH_DEFINE + (QUIET_DEFINE if quiet else "") + (DEPTH_ONLY_DEFINE if depth_only else "") + EDGE_SHADER.code
+		_finish_shaders[key] = shader
+	return _finish_shaders[key]
+
+
+## Whether the tuned finish draws nothing of its own: no grain, no wobble, no line break.
+static func finish_is_quiet() -> bool:
+	var t := Tuning.data
+	return t.look_finish_grain <= 0.0 and t.look_finish_wobble_px <= 0.0 and t.look_finish_line_break <= 0.0
 
 
 ## Whether the frame's finish is on: the trailer profile only.
@@ -269,7 +281,7 @@ func _apply_grade() -> void:
 		return
 	var t := Tuning.data
 	_environment.tonemap_mode = tonemap_mode(t.look_tonemap)
-	var bloom := LookProfile.bloom_allowed()
+	var bloom := LookProfile.bloom_allowed() and not OS.get_environment("PERF_OFF").split(",").has("glow")
 	if _environment.glow_enabled != bloom:
 		_environment.glow_enabled = bloom
 	# The profile's LUT: another profile's file is read and the texture rebuilt from it.

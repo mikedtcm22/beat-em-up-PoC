@@ -66,12 +66,22 @@ void fragment() {
 			}
 		}
 		if (dist + edge_wobble_m + 0.5 * edge_brush_m - clear_m + soft > first_start) {
-			float n = vnoise3(wp * edge_scale) - 0.5;
-			// G4: a brushed edge: a blocky hash of the world (cells of 0.4 m, so one hash and no extra noise) bites each band's edge, so it is a stroke's edge, not a contour.
-			float brush = hash13(floor(wp * vec3(2.5, 1.0, 2.5))) - 0.5;
-			float d = dist + n * 2.0 * edge_wobble_m + brush * edge_brush_m - clear_m;
 			vec4 colors[3] = vec4[3](band_color_1, band_color_2, band_color_3);
 			float starts[3] = float[3](band_start_m.x, band_start_m.y, band_start_m.z);
+			// M7 D2: the noise only matters where it can carry the distance across a band's edge (within its reach of a start); anywhere else
+			// every band's smoothstep is already 0 or 1 at the plain distance and the noisy one alike, so the plain distance gives the same pixel.
+			float reach = edge_wobble_m + 0.5 * edge_brush_m + soft;
+			float d = dist - clear_m;
+			bool near_edge = false;
+			for (int i = 0; i < 3; i++) {
+				near_edge = near_edge || (starts[i] > 0.0 && abs(d - starts[i]) < reach);
+			}
+			if (near_edge) {
+				float n = vnoise3(wp * edge_scale) - 0.5;
+				// G4: a brushed edge: a blocky hash of the world (cells of 0.4 m, so one hash and no extra noise) bites each band's edge, so it is a stroke's edge, not a contour.
+				float brush = hash13(floor(wp * vec3(2.5, 1.0, 2.5))) - 0.5;
+				d += n * 2.0 * edge_wobble_m + brush * edge_brush_m;
+			}
 			for (int i = 0; i < 3; i++) {
 				if (starts[i] > 0.0) {
 					float k = smoothstep(starts[i] - soft, starts[i] + soft, d);
@@ -88,6 +98,10 @@ void fragment() {
 		}
 	} else if (sky_share > 0.0) {
 		result = vec4(band_color_3.rgb, band_color_3.a * sky_share);
+	}
+	// Most of a view takes no tint (the near ground, the sky): those pixels write nothing (M7 D2: no blend for a zero alpha).
+	if (result.a <= 0.0) {
+		discard;
 	}
 	ALBEDO = result.rgb;
 	ALPHA = result.a;

@@ -282,9 +282,62 @@ func _physics_process(_delta: float) -> void:
 	_tick()
 
 
+const PROBE_NAMES := {halo = "LampHalo", pool = "LampPool", wall = "LampWallGlow", shaft = "LampShaft", windows = "WindowGlow", wash = "SkylineWash", mattes = "Matte", propshadow = "PropShadow", actorshadow = "ContactShadow", poles = "LampPole", heads = "LampHead", haze = "HazeQuad", streetfx = "StreetFx"}
+static func probe_off(f: String) -> bool:
+	return OS.get_environment("PERF_OFF").split(",").has(f)
+var _probe_n: int = 0
+func _probe() -> void:
+	_probe_n += 1
+	if _probe_n % 5 != 1:
+		return
+	var offs := OS.get_environment("PERF_OFF").split(",")
+	var all_cards := offs.has("allcards")
+	for key: String in PROBE_NAMES:
+		if not (offs.has(key) or (all_cards and key in ["halo", "pool", "wall", "shaft", "windows", "wash", "mattes", "propshadow", "actorshadow"])):
+			continue
+		for node: Node in get_tree().root.find_children(PROBE_NAMES[key] + "*", "Node3D", true, false):
+			(node as Node3D).visible = false
+	if offs.has("lights"):
+		for node: Node in get_tree().root.find_children("LampLight*", "OmniLight3D", true, false):
+			(node as Node3D).visible = false
+	var lc := OS.get_environment("PERF_LCULL")
+	if lc != "":
+		var cam := get_viewport().get_camera_3d()
+		if cam != null:
+			for node: Node in get_tree().root.find_children("LampLight*", "OmniLight3D", true, false):
+				(node as Node3D).visible = (node as Node3D).global_position.distance_to(cam.global_position) < float(lc)
+	var lr := OS.get_environment("PERF_LRANGE")
+	if lr != "":
+		for node: Node in get_tree().root.find_children("LampLight*", "OmniLight3D", true, false):
+			if not node.has_meta(&"r0"):
+				node.set_meta(&"r0", (node as OmniLight3D).omni_range)
+			(node as OmniLight3D).omni_range = float(node.get_meta(&"r0")) * float(lr)
+	var lk := OS.get_environment("PERF_LKEEP")
+	if lk != "":
+		var idx := 0
+		for node: Node in get_tree().root.find_children("LampLight*", "OmniLight3D", true, false):
+			(node as Node3D).visible = idx < int(lk)
+			idx += 1
+	var gl := OS.get_environment("PERF_GLOWLV")
+	if gl != "":
+		var env2 := _environment()
+		if env2 != null:
+			var parts := gl.split(",")
+			for i in 7:
+				env2.set_glow_level(i, float(parts[i]))
+	if offs.has("glow"):
+		var env := _environment()
+		if env != null:
+			env.glow_enabled = false
+	if offs.has("sky") and _sky_material != null:
+		var e := _environment()
+		if e != null and e.sky != null and e.sky.sky_material == _sky_material and _sky_material_before != null:
+			e.sky.sky_material = _sky_material_before
+
 func _tick() -> void:
 	if not _active or (_level == null and _room == null):
 		return
+	_probe()
 	if _room != null:
 		# The room's light is the night look's (LookPost writes the profile's dusk on every look change; this lays the night over it).
 		RoomKit.apply_room_light(_room, _room_light())
