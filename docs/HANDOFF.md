@@ -4,6 +4,14 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-22: M7 signed off and merged
+
+- **State:** Game-boy signed off Milestone 7 in chat ("Yes, merge M7"); the M7 pull request (#7) is merged into `main`. T57 is logged `pass`. Nothing is running and nothing is waiting on him.
+- **Footage:** the encoded M7 look footage (reels, clips, sheets from `captures/`) is on GitHub as the private pre-release `m7-look-footage-1`. The raw `.avi` recordings stay local.
+- **Also pushed:** `m2/trial-merge` (old scratch branch) and `m7/d2-probe` (the D2 perf-probe worktree's uncommitted edits, as a `wip:` commit; not for merge).
+- **Carried open:** the frame-time question from Gate 4 (below) was not answered with the sign-off.
+- **Next:** write the next milestone's proposal and wait for his go, as M6 and M7 started. The `m7/*` worktrees can be removed.
+
 ### 2026-11-15 (Gate 4): M7 is with Game-boy for sign-off
 
 - **State:** T40 to T56 are done. `m7/trailer-look` holds everything: the comic look as the default (F7 shows M6), five enemies, street, dusk roofs, boss roof, rooms, 13 cut-in cards, comic HUD. Suite 2309/2309. The M7 pull request is open against `main`. **Do not merge it until Game-boy signs off.**
