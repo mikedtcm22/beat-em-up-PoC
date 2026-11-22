@@ -17,6 +17,7 @@
 [ext_resource type="Script" path="res://game/level/kit/art/kit_piece.gd" id="91_piece"]
 [ext_resource type="Script" path="res://game/level/kit/art/prop_spot.gd" id="92_spot"]
 [ext_resource type="Script" path="res://game/level/kit/inset_block.gd" id="inset_blk"]
+[ext_resource type="Script" path="res://game/level/look/dusk_deck.gd" id="94_deck"]
 
 [sub_resource type="BoxShape3D" id="Box_1"]
 size = Vector3(12.3, 5.8, 28.5)
@@ -31,6 +32,7 @@ size = Vector3(14, 6.2, 25.5)
 script = ExtResource("1_section")
 floor_heights = PackedFloat32Array(0, 1, 4.5, 7.5)
 ambience = &"ambience_roof"
+look_location = &"roofs_dusk"
 light_enabled = true
 sun_elevation_deg = 36.0
 sun_yaw_deg = -60.0
@@ -1746,3 +1748,6 @@ position = Vector3(-30.94, -3.7, -52)
 rotation = Vector3(0, 1.5708, 0)
 kind = &"shutter"
 size = Vector3(4.4, 3.2, 0.12)
+
+[node name="DuskDeck" type="Node3D" parent="."]
+script = ExtResource("94_deck")

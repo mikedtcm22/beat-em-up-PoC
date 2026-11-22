@@ -7,6 +7,7 @@ extends GutTest
 ## code, authored at the table's rest and in a 45-degree A-pose, rigid and smooth weighted.
 ## The same checks take every committed art GLB later (F-punk, F-player-int).
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const Fixture := preload("res://tests/fixtures/skinned_probe_art.gd")
 const FPView := preload("res://tests/fp_view.gd")
 const SkinnedView := preload("res://tests/skinned_view.gd")
@@ -28,6 +29,7 @@ func before_each() -> void:
 	TimeController.clear()
 	TimeController.debug_scale = 1.0
 	Tuning.apply(TuningData.new())
+	LookProfileHelper.use_m6()
 	SkinnedArt.clear_cache()
 	SkinnedView.clear_cache()
 

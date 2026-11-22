@@ -4,6 +4,7 @@ extends GutTest
 ## HUD reads, so they need no rig and stay inert next to the real implementations. HUD time
 ## is driven by calling GameHud.advance() with chosen deltas (processing is turned off).
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const HUD_SCENE := preload("res://game/ui/hud.tscn")
 
 
@@ -110,6 +111,7 @@ var _saved_center_dot: bool
 
 
 func before_each() -> void:
+	LookProfileHelper.use_m6()
 	_saved_center_dot = Tuning.data.show_center_dot
 	# Camera at the origin looking down -Z, so enemies at negative z are in front of it.
 	_camera = Camera3D.new()
@@ -121,6 +123,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	LookProfileHelper.restore()
 	Tuning.data.show_center_dot = _saved_center_dot
 
 

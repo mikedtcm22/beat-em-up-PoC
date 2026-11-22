@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="EnemyVariant" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="EnemyVariant" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://game/enemies/enemy_variant.gd" id="1_variant"]
 [ext_resource type="Texture2D" path="res://assets/export/palette/punk_veteran_atlas.png" id="2_palette"]
+[ext_resource type="Texture2D" path="res://assets/export/characters/punk/trailer/punk_veteran_paint.png" id="3_trailer_paint"]
 
 [resource]
 script = ExtResource("1_variant")
@@ -10,3 +11,4 @@ base_id = &"punk"
 label = "Veteran Punk"
 arc_deg = 140.0
 palette = ExtResource("2_palette")
+metadata/trailer_paint = ExtResource("3_trailer_paint")

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-150 -170 300 340">
+<!-- Ox's bold face (M7 e-ox): millimetres over the head's front view, origin (0, 1.671 m), x to the viewer's right, y down. Heavy brows on the band's
+     lower edge, narrow eye slits, a nose side line with its hook, a set mouth, a jaw line. Lines go into the ink only; his colours are the M6 palette's. -->
+<g data-view="front" data-origin="0 1.671" data-px="4">
+	<g stroke-width="0.3" opacity="1.0" data-wobble="0">
+		<path id="eye_w_l" d="M -56 52 Q -38 43 -16 51 L -19 64 Q -36 69 -53 63 Z" fill="ink" fill-opacity="1.0" data-paint="#f0e6d0"/>
+		<path id="eye_w_r" d="M 56 50 Q 38 41 16 49 L 19 62 Q 36 67 53 61 Z" fill="ink" fill-opacity="1.0" data-paint="#f0e6d0"/>
+	</g>
+	<g stroke-width="0.6" opacity="1.0" data-wobble="0" fill="ink" fill-opacity="1.0">
+		<path id="pupil_l" d="M -40 47 L -28 49 L -28 65 L -40 65 Z"/>
+		<path id="pupil_r" d="M 28 45 L 40 47 L 40 63 L 28 63 Z"/>
+	</g>
+	<g stroke-width="0.3" opacity="1.0" data-wobble="0" data-channel="catch" fill="ink">
+		<path id="glint_l" d="M -38 51 L -32 52 L -32 58 L -38 58 Z"/>
+		<path id="glint_r" d="M 32 49 L 38 50 L 38 56 L 32 56 Z"/>
+	</g>
+	<g stroke-width="9.5" opacity="1.0" data-taper="0.05,0.3" data-wobble="0">
+		<path id="brow_l" d="M -68 34 C -52 34, -34 38, -10 50"/>
+		<path id="brow_r" d="M 68 32 C 52 32, 34 36, 10 48"/>
+	</g>
+	<g stroke-width="4.0" opacity="1.0" data-taper="0.15,0.15" data-wobble="0">
+		<path id="lid_l" d="M -56 52 Q -38 43 -16 51"/>
+		<path id="lid_r" d="M 56 50 Q 38 41 16 49"/>
+		<path id="under_l" d="M -52 66 Q -36 72 -20 66"/>
+		<path id="under_r" d="M 52 64 Q 36 70 20 64"/>
+	</g>
+	<g stroke-width="3.2" opacity="1.0" data-taper="0.1,0.3" data-wobble="0">
+		<path id="nose_side" d="M -10 56 C -16 68, -20 80, -16 90"/>
+		<path id="nose_base_r" d="M 5 93 C 9 96, 15 96, 19 91"/>
+		<path id="nose_base" d="M -19 93 C -14 97, -7 97, -3 93"/>
+	</g>
+	<g stroke-width="4.4" opacity="1.0" data-taper="0.15,0.15" data-wobble="0">
+		<path id="mouth" d="M -34 120 C -12 122, 12 122, 34 120"/>
+	</g>
+	<g stroke-width="2.6" opacity="1.0" data-taper="0.1,0.1" data-wobble="0">
+		<path id="mouth_l" d="M -36 113 L -33 123"/>
+		<path id="mouth_r" d="M 36 113 L 33 123"/>
+	</g>
+</g>
+</svg>

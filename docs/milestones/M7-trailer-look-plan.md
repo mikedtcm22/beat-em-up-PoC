@@ -1,6 +1,6 @@
 # Milestone 7 (proposed): the trailer's look, playable
 
-**Status:** a plan for Game-boy's review, written 2026-11-10. Nothing is built. Work starts only on his go.
+**Status:** approved by Game-boy on 2026-11-11 (Slack DM, 08:52 CST) with one change: Ox keeps his M6 colouring. His answers are in §5 and in README, "Where M7 departs from the spec". Branch `m7/trailer-look`, cut from `main` after PR #6 merged.
 **Budget table:** [.claude/cfo/plan.md](../../.claude/cfo/plan.md) holds every task with its model, effort and done-when. This file holds the reasoning, the gates and the decisions.
 
 ## 1. What the trailer is, and what that means
@@ -59,7 +59,15 @@
 - Then one review round (three Opus visual lenses, one Sonnet code lens), one fix wave, a targeted re-check, the judge and frame time again.
 - **Gate 2 (Game-boy):** he plays Mission 1 start to finish in the trailer look and signs off the PR.
 
-## 5. What I need from Game-boy before starting
+## 5. Game-boy's answers (2026-11-11)
+
+1. Reorder approved; PR #6 merged as M6's completion.
+2. Designs approved, except Ox: he keeps his M6 colouring (the trailer's Ox had no colour, which Game-boy didn't like). Ox still takes the trailer's ink, hatching, face and light.
+3. Both look-bible limits lifted for the `trailer` profile.
+4. Spend approved. DM him if Gemini or Tripo needs more credit.
+5. Yes, that's the bar.
+
+The questions as asked:
 
 1. **Order of milestones.** I propose this becomes Milestone 7, and the old M7 (performance target, Windows export) becomes M8, since M8 should measure the final art. PR #6 is still unsigned; I'd branch `m7/trailer-look` from its tip. Sign off PR #6 first, or branch now?
 2. **Canonical designs.** Punk: grey cap, dark puffy vest (trailer at 15 s). Ox: grey hooded brute with a belly plate and stitched gloves (26 s). Player: grey sleeves, dark gloves (6 s). Kicker: flat cap and vest (14 s). Street as at 2 s, roof as at 14 s, fire as at 19 s. This drops M6's yellow cap, teal vest and orange Ox gloves. A one-page sheet comes first in Phase 0 for his yes.

@@ -1,0 +1,94 @@
+{
+ "origin": [
+  -0.016,
+  1.68
+ ],
+ "bones": [
+  "Head",
+  "Neck"
+ ],
+ "landmarks_mm": {
+  "eye_l": [
+   -42,
+   56
+  ],
+  "eye_r": [
+   42,
+   56
+  ],
+  "nose": [
+   0,
+   102
+  ],
+  "mouth_c": [
+   0,
+   122
+  ],
+  "mouth_l": [
+   -38,
+   128
+  ],
+  "mouth_r": [
+   38,
+   128
+  ],
+  "chin": [
+   0,
+   150
+  ],
+  "jaw": [
+   0,
+   166
+  ],
+  "brim_c": [
+   0,
+   12
+  ],
+  "brim_l": [
+   -104,
+   22
+  ],
+  "brim_r": [
+   104,
+   22
+  ],
+  "crown": [
+   0,
+   -146
+  ]
+ },
+ "sheets": [
+  {
+   "name": "body_front",
+   "src": "gemini/body_front.jpg",
+   "yaw": 0,
+   "mirror": false,
+   "bones": "all",
+   "window": [
+    -0.75,
+    0.75,
+    -0.03,
+    1.9
+   ],
+   "ppm": 1.5,
+   "points": {},
+   "identity": true
+  },
+  {
+   "name": "body_back",
+   "src": "gemini/body_back.jpg",
+   "yaw": 180,
+   "mirror": false,
+   "bones": "all",
+   "window": [
+    -0.75,
+    0.75,
+    -0.03,
+    1.9
+   ],
+   "ppm": 1.5,
+   "points": {},
+   "identity": true
+  }
+ ]
+}

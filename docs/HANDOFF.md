@@ -4,6 +4,168 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-22: M7 signed off and merged
+
+- **State:** Game-boy signed off Milestone 7 in chat ("Yes, merge M7"); the M7 pull request (#7) is merged into `main`. T57 is logged `pass`. Nothing is running and nothing is waiting on him.
+- **Footage:** the encoded M7 look footage (reels, clips, sheets from `captures/`) is on GitHub as the private pre-release `m7-look-footage-1`. The raw `.avi` recordings stay local.
+- **Also pushed:** `m2/trial-merge` (old scratch branch) and `m7/d2-probe` (the D2 perf-probe worktree's uncommitted edits, as a `wip:` commit; not for merge).
+- **Carried open:** the frame-time question from Gate 4 (below) was not answered with the sign-off.
+- **Next:** write the next milestone's proposal and wait for his go, as M6 and M7 started. The `m7/*` worktrees can be removed.
+
+### 2026-11-15 (Gate 4): M7 is with Game-boy for sign-off
+
+- **State:** T40 to T56 are done. `m7/trailer-look` holds everything: the comic look as the default (F7 shows M6), five enemies, street, dusk roofs, boss roof, rooms, 13 cut-in cards, comic HUD. Suite 2309/2309. The M7 pull request is open against `main`. **Do not merge it until Game-boy signs off.**
+- **Review:** 23 confirmed findings; 16 cured, 7 partly (list in docs/milestones/M7-comic-3d.md, "Result").
+- **Frame time (open, his call):** CPU work +2% street, +3% roofs, +12% boss roof against M6; wall frame +15/+20/+25%, 2 to 4% of frames miss a refresh (M6 0.2 to 0.4%), measured with the GPU 93 to 99% busy with other processes. Table: `captures/m7-comic/final/perf.txt`.
+- **Waiting on Game-boy:** plays Mission 1 (`godot --path .`), then signs off, or names what to fix. Sent in chat and by Slack DM: `captures/m7-comic/final/reel_mission1.mp4`, `sheet.jpg`, `captures/m7-comic/final_cards_sheet.jpg`.
+- **Resume:** on sign-off, merge the pull request and log T57 `pass`. On fixes, run them as one more wave from `m7/trailer-look` (plan Log must note the extra wave). Nothing is running; all `m7/x-*` and `m7/t53` branches are merged and their worktrees can be removed.
+
+### 2026-11-15 (T55 done): fix wave merged, suite green, final perf and recordings in `captures/m7-comic/final/`
+- `m7/trailer-look` at ed87ec4 has t53 and all six fix branches merged, default.json regenerated (d71626e), and the LookProfile.data() reload fix (ed87ec4: the +1 ms physics cost).
+- **Suite:** 2309 of 2309 passed, 670 s, no SCRIPT or SHADER ERROR (`final/suite.log`).
+- **Frame time (`final/perf.txt`, T54 method):** comic vs m6 CPU work +2% street, +3% roofs, +12% boss roof (T54: +20/+20/+23); wall +15/+20/+25%; missed refreshes 2.2/2.0/4.1% (m6 0.2-0.4%, T54 4.1/4.0/4.3). By CPU it holds 60 fps everywhere; by wall time it does not, the cost now all on the GPU/present side of a GPU other processes keep 93-99% busy. The boss roof's remaining +0.4 ms of physics is not probed.
+- **For the owner:** `final/reel_mission1.mp4` (43.6 s, m6 | comic, street, roofs, Ox, then every card), `final/sheet.jpg`, `final/stills/`, `final/m6_stills/`, `final/enemies/`, `final/INDEX.md`.
+- **Review findings (rollout/review.json):** 16 cured, 7 partly, none not. Partly: #1 bruises still soft pink (blood cured), #2 Kicker's face small and dark at 2 m (Bruiser cured), #4 player sleeve has few folds, #7 roofs have warm accents but airbrushed blotchy wall glows, #8 a pale lavender glow block on the right wall in street_01 and soft lamp glows, #12 Punk and Thug KO panels still the street, #19 bossroof_fx keeps the roof centre (-10) and FACE_LIFT_M in script. Ox (#3) is back at M6 orange; his warm rim was not judged at this size.
+- **Gemini, fix wave:** x-cards 6 images, about $0.80 (no other branch spent).
+- **Next:** T56 docs (README departures, ARCHITECTURE, milestone doc, PR description), T57 Gate 4 to Game-boy.
+
+### 2026-11-15 (fix wave): T53 and T54 done; T55 fix wave running as workflow `m7-comic-fix-wave-2`
+- `m7/t53` (not yet merged) makes the comic look the default; suite 2285 green there. Review findings: `captures/m7-comic/rollout/review.json` (23 confirmed). Perf by engine counters: `captures/m7-comic/rollout/perf2.txt`.
+- T55 branches: `m7/x-shader`, `x-chars`, `x-roofs`, `x-street`, `x-cards`, `x-cutin`; then an Opus merge (t53 first), an Opus debug of the +1 ms physics-time cost under the trailer profile, then suite, perf and recordings into `captures/m7-comic/final/`.
+- Resume: re-run the workflow script with `resumeFromRunId` if it died. After it: T56 docs (README departures, ARCHITECTURE, milestone doc, PR description), T57 Gate 4 to Game-boy (reel, sheet, `godot --path .`, Slack DM). Never merge the PR before his sign-off.
+
+### 2026-11-14 (T52 done): Mission 1 roll-out merged and recorded; frame time misses the gate by today's method (see the control)
+- **Merged** into `m7/trailer-look` (wave 2): e-roofs 6730209, e-bossroof df9501e (conflicts: trailer.tres keeps both area rows; trailer_look.gd keeps e-roofs' blended area look, which also follows the boss roof, and hides the street's far plates on a section whose look builds no street), e-rooms 51f5ce7 ("Boss roof (M7)" and "Rooms (M7)" groups moved before "Look profile" so the pinned tail holds), e-hud da9107a, e-cards f4c1c9a; ea0fe8b regenerates `tuning/default.json`; a511b57 fixes ASSETS.md full paths, adapts test_bossroof_look to the merge (two TrailerLook streets, none on the boss roof; the rim check waits out the section light blend) and adds perf acts "Perf: roofs walk" and "Perf: boss roof".
+- **Suite:** 2284 tests; the first full run had 5 failures (all merge fallout), the five files pass after a511b57; no SCRIPT or SHADER ERROR (`captures/m7-comic/rollout/suite.log`, `rerun_*.log`).
+- **Frame time (`captures/m7-comic/rollout/perf.txt`):** trailer vs m6, level walk +15.2%, roofs +20.5%, boss roof +21.8%: over the +10% gate. But the display now runs at 60 Hz (m6 16.0 ms vs 10.98 ms in slice2), and a control run of the approved slice (b7a4aa0) under the same conditions measures +13.8% / +16.8% / +17.7%: the roll-out adds only 1.5-2.3% over the slice, m6 unchanged. No fix made; re-read the gate on slice2's display before cutting anything.
+- **For the owner:** `captures/m7-comic/rollout/reel_mission1.mp4` (m6 | trailer, street, roofs, Ox, 40 s), `cards.mp4` (13 cards), `sheet.jpg`, `stills/`, `INDEX.md`.
+- **Gemini, roll-out branches:** Thug 3 images (~$0.40), Bruiser 4 (~$0.54), e-cards 9 (~$1.21): 16 images, about $2.15.
+- **Still off the target, worst first:** roofs read as one flat grey-mauve value (walls, floor, shadows), muddy against the street's night; the hit flash whites out an enemy's head and chest with a soft gradient; the boss roof fire and the dusk clouds read as round bubbly lobes, not drawn flame and cloud shapes; Ox reads orange and brown, not his M6 grey, with wobbly broken ink on his shoulder pads at close range; the player's forearm close up is one flat grey shape with no shade edge; the Ox name and KO cards are set in the street, not on the burning roof; the boss bar has no caption box and the WHAM/BAM lettering slides under the HP panel; Kicker green and wraps too bright; Bruiser armour pale lavender; thug, kicker and Ox entrance cards keep a flat dark slab at left.
+- **Next:** T53 (new look default), T54 review.
+
+### 2026-11-14 (roll-out): Gate 3 passed ("Go, roll out"); Phase 3b T51 and T52 are running as workflow `m7-comic-rollout`
+- Order: recipe step on `m7/r0` (worktree `.worktrees/m7-r0`), wave 1 on `m7/e-thug`, `e-bruiser`, `e-kicker`, `e-ox`, `e-street` (branched from `m7/r0`), an Opus merge into `m7/trailer-look`, wave 2 on `m7/e-roofs`, `e-bossroof`, `e-rooms`, `e-cards`, `e-hud`, then the T52 merge with suite, frame time and recordings into `captures/m7-comic/rollout/`.
+- Resume: if the workflow died, re-run its script (session workflows/scripts, `m7-comic-rollout-*.js`) with `resumeFromRunId`. After it: T53 (new look default, tests that assume m6 start), T54 review workflow, T55 fix wave, T56 docs, T57 Gate 4. Gemini cap for T51 is $14.
+
+### 2026-11-14 (Gate 3): the clean slice is with Game-boy; waiting on go, adjust or stop
+- T49 is closed (pass). Reel `captures/m7-comic/slice2/reel_m6_old_new.mp4`, sheet `slice2/sheet_old_new.jpg` and `captures/m7-comic/cards_sheet2.jpg` were sent in-app, with a Slack DM.
+- Do not start Phase 3b (T51 to T57) without his answer. On "go": run T51 as planned and carry the known leftovers (plan Log, 2026-11-14) into the Punk recipe first.
+
+### 2026-11-14 (T49 done): D1-D3 merged; suite green; frame time +8.8% at full scale (gate passes); slice re-recorded in `slice2/`
+- **Merged** into `m7/trailer-look`: m7/d1 (b151cd9), d2 (9e447d7), d3 (cd4d7b8); a18e426 regenerates `tuning/default.json` (the merge dropped D2's `night_lamp_fade_m`/`_len_m`); b7a4aa0 adds `cut_in_bot --full-entrance` (the entrance card runs its whole hold, for recordings).
+- **Suite:** 2209/2209, no SCRIPT or SHADER ERROR (`captures/m7-comic/slice2/tests.log`).
+- **Frame time (`captures/m7-comic/slice2/perf.txt`):** m6 10.98 ms, trailer 11.95 ms, **+8.8% (PASS)**, p95 +8.6%, full scale (no 0.93 fallback). Thin margin: one trailer run alone was +11.7%.
+- **For the owner:** `captures/m7-comic/slice2/reel_m6_old_new.mp4`, `sheet_old_new.jpg`, `new/stills/` (incl. card_f*.png), `INDEX.md`.
+- **Still off the target:** Punk face reads grey, with a hard light band across mouth and chin and a stray ink stroke on the cheek; about six scattered maroon bruise patches at f640; jeans carry blue painted patches (not two flat tones); orange rim reads as a band on the vest edge; lamp halos are flat orange discs with a rim; far towers' window grid still repeats evenly; the cards' Punk (dark hair, stubble) does not match the in-game Punk (blond sides).
+- **Next:** close T49 with `cfo.py done`, then T50 (Gate 3 to Game-boy).
+
+### 2026-11-13 (fix wave): T48 look done, T49 fix wave running (workflow `m7-comic-fix-wave`, run `wf_66e4d171-9fa`)
+- T41 to T47 are done (T47 logged fail: frame time +13.3% at full scale; suite 2206 green). The lead's look: fence, flat fills, clean arms and the thin rim are right.
+- Fix list (also in the plan Log): D1 bruise style under the trailer profile (small hard maroon shapes on skin only, same thresholds) and no shadow-map shadow on figures, branch `m7/d1`; D2 frame time under +10% at full scale (fallback scale 0.93 only if stills are indistinguishable) and a calmer lamp halo, `m7/d2`, runs alone after the other two; D3 cards redrawn from new-look stills (Gemini cap $2) and thinner glove ink, `m7/d3`. Then an Opus merge, suite, perf, re-record into `captures/m7-comic/slice2/`.
+- Resume: if the workflow died, re-run its script with `resumeFromRunId`; otherwise check `slice2/`, close T49 with `cfo.py done`, then T50 (Gate 3: reel, sheet and `godot --path .` to Game-boy, Slack DM). Do not start 3b without his answer.
+
+### 2026-11-13 (T47 done): the clean slice is merged and recorded; frame time misses the gate at full scale
+
+- **Merged** into `m7/trailer-look`: m7/c1 (7484df3), c4 (23539a7), c5 (5317800), c3 (2f5be1b), then e19c303: the Punk's skin and eye band warmed (T41's paint fix, which T43 had not applied; maps regenerated), the "Cut-ins (M7)" group moved before Audio (the Audio, Look, Debug tail is pinned), the fence uniforms unset under m6 (exact round trip), ASSETS rows for each card, test_street_fx runs with cards off.
+- **Suite:** 2206/2206, no SCRIPT or SHADER ERROR (`captures/m7-comic/slice/tests2.log`).
+- **Frame time (`captures/m7-comic/slice/perf.txt`):** m6 10.95 ms, trailer 12.40 ms, **+13.3% (gate +10%: MISS)**, p95 +10.7%. The whole cost is the full-scale 3D view the target asks for (look_finish_scale 1.0): at 0.85 the same tree is 9.88 ms. Two cheap cuts (edge-finish early-outs, half-res sky) gained nothing and were reverted. Needs the lead's call: a per-feature probe at full scale, or a scale between.
+- **For the owner:** `captures/m7-comic/slice/reel_m6_old_new.mp4` (m6 | old | new, then the cards), `sheet_old_new.jpg`, stills and clips in `new/`, `INDEX.md`.
+- **Still off the target:** the bruise marks on the street Punks at f640 (0.6 health, as M6) read as big violet and grey blotches over face, vest and gloves; the gloves carry too much ink; the stage Punk still casts a shadow-map shadow; the lamp halos are puffy; the far windows are dim; the cards still show the old chain-link fence and the old slashed arm, and the entrance card's Punk wears sunglasses.
+- **Next:** T48, the lead's look and a fix list of at most three.
+
+### 2026-11-13 (build): Game-boy approved Phase 3 ("Approve, start"); the clean slice is building
+
+- **Decision (chat, 2026-11-13):** "Approve, start": the comic-book 3D plan as written, including the cut-in cards and the new look as default at the end. Target: `docs/milestones/M7-comic-3d.md` (T40 done, README departures added).
+- **Running:** workflow `m7-comic-slice`, run `wf_c099416d-3c4` (script under `~/.claude/projects/-Users-arachne-repos-beat-em-up-PoC/4532b8a7-9eb5-41f2-9651-88f769f37f0b/workflows/scripts/`). CFO rows T41 to T47 are started.
+  - `m7/c1` in `.worktrees/m7-c1`: T41 (Opus, the purple face blotch) then T42 (Sonnet, figure shader cleanup).
+  - `m7/c3`: T43 Punk and arms repainted clean, face from the S1 spike. `m7/c4`: T44 drawn fence, broken window rows, stepped halos. `m7/c5`: T45 cut-in system then T46 the four drawn cards.
+  - T47 (Opus): merge c1, c4, c5, c3; suite; frame time; record into `captures/m7-comic/slice/` with `reel_m6_old_new.mp4` and `sheet_old_new.jpg`.
+- **Resume if cut off:** same session: Workflow with that `scriptPath` and `resumeFromRunId`. New session: see which of `m7/c1`, `c3`, `c4`, `c5` carry an "M7 C" commit, re-run the missing briefs from the script, then T47.
+- **Next:** T48 the lead's look and a fix list of at most three, T49 one fix wave, T50 Gate 3 (reel and run command to Game-boy).
+
+### 2026-11-13 (plan): comic-book 3D replan written, waiting on Game-boy's approval
+
+- Game-boy did not pick the sprite Punk. He asked for the best trade of art and feasibility with the exact style relaxed, then for the plan. It is `.claude/cfo/plan.md`, "Phase 3: comic-book 3D" (T40 to T57); Phase 2 (T30 to T39) is superseded and was never run.
+- Open questions put to him: (1) the new bar and gate by his eye, (2) adding cut-in cards (title, enemy entrances, knockouts, end), a spec change, (3) the new look as default with M6 on F7.
+- **Start nothing until he approves.** First rows on approval: T40 inline, then T41 (Opus debug of the purple face blotch), then T42 to T46 in parallel worktrees.
+
+### 2026-11-13 (later): route spikes done; proposal sent, waiting on Game-boy
+
+- Outputs: `captures/m7-slice/spikes/` (`routes_sheet.jpg`: now | S1 | S2 | S3 | S0; `routes_reel.mp4`; `s0..s3/`). Judge `judge4/`: now 0.78, S0 0.72, S1 0.73, S2 0.75, S3 0.73; trailer 0.40, m6 0.90. The judge cannot rank the routes: even the trailer's own repaint method on our frames fails. Suspected confound: the HP panel and first-person framing in every game frame.
+- By eye: S1's drawn cut-out Punks read as cels and the 8-pose walk holds face, cap and vest; first-person arms as sprites failed (arms_05). S2's projected street reads painted on-axis but smears and seams at 25 degrees and loses dynamic light.
+- Proposal put to Game-boy: a playable slice with the Punk as drawn sprites (3D skeleton and hits kept underneath, 3D arms and current street kept), about $25 Gemini, to judge in motion; or stop and keep the F7 look. **Start nothing until he answers.** `m7/spike-s1`, `m7/spike-s2` are pushed and not to be merged.
+
+### 2026-11-13: Game-boy chose "Propose a new route"; route spikes are running (T28, T29)
+
+- **Decision (chat, 2026-11-13):** "Propose a new route". The painted-texture route is parked; the slice stays on `m7/trailer-look` behind F7.
+- **Running:** workflow `m7-route-spikes`, run `wf_e65c0eaa-df9` (script under `~/.claude/projects/-Users-arachne-repos-beat-em-up-PoC/4532b8a7-9eb5-41f2-9651-88f769f37f0b/workflows/scripts/`). Same four moments per route (street_03, street_05, arms_03, arms_05), outputs in `captures/m7-slice/spikes/`:
+  - S0: full-frame Gemini repaint of game stills (the trailer's own method; the ceiling).
+  - S1: enemies and first-person arms as hand-drawn cut-outs on cards (`.worktrees/m7-s1`, `m7/spike-s1`), plus an 8-pose walk cycle to test frame-to-frame consistency.
+  - S2: Gemini-painted views projected onto the street geometry (`.worktrees/m7-s2`, `m7/spike-s2`), plus an off-axis still and a walk clip.
+  - S3: S1 over S2. Then blind judge sets in `judge4/` (keys in `judge4_keys/`), three Opus judges, scoring. Gemini cap $4 per spike. Spike branches are not to be merged.
+- **Next:** the lead sends Game-boy `spikes/routes_sheet.jpg`, the reel and a short proposal (route, cost, what is lost), then waits. Start no build until he picks.
+
+### 2026-11-12 02:00: adjust round done; frame time passes, the blind judge still fails; waiting on Game-boy (T27)
+
+- Judge (`captures/m7-slice/judge3/`): cand_street 0.80 (was 0.80), cand_arms 0.80 (was 0.92), cand_punk 0.95 (was 0.88); trailer 0.35 (0.10-0.55), m6 0.90. Gate is 0.19. Frame time: m6 10.90 ms, trailer 10.15 ms, -6.9% (`perf3/report.txt`). Suite 2172/2172 at b6a53a3.
+- Still wrong: purple blotch on Punk faces (not the damage look, not the key's cast shadow; look in paint_tex and the shade term), chain-link still a regular lattice, window rows, even outlines, shadow-map cast shadows.
+- The lead told Game-boy: two rounds moved the judge by almost nothing, so the painted-asset route will not reach the trailer; recommend stopping it. Options put to him: keep the slice as an optional look (F7) and close M7 here, or try a different route. **Start nothing until he answers.** Reel: `captures/m7-slice/gate1b/`.
+
+### 2026-11-12 01:30: adjust round merged (G1-G4 plus the perf cut); slice re-recorded; the blind judge is running (T25)
+- Merged on `m7/trailer-look` (b6a53a3): G1, G3, G4, G2 and the perf cut. Full suite 2172/2172 in 452 s, no SCRIPT or SHADER ERROR.
+- Frame time (perf3, interleaved, 4 runs each): m6 10.90 ms, trailer 10.15 ms, -6.9% (was +22.6%). Report: `captures/m7-slice/perf3/report.txt`.
+- Stills and clips: `captures/m7-slice/merged3/{m6,trailer}/` (INDEX.md there; arms use the new night-street act). Owner reel: `captures/m7-slice/gate1b/`.
+- Judge sets: `captures/m7-slice/judge3/run1..3` (73 images and 13 sheets each); keys moved to `captures/m7-slice/judge3_keys/run<N>.json`. The judge is running; score with `tools/look/score_judge.py` against those keys.
+
+### 2026-11-11 21:50: Game-boy answered Gate 1 with "Adjust: one more round"; the adjust round is running
+
+- **Decision (chat, 2026-11-11):** "Adjust: one more round". Arm A (the existing Punk mesh) is the lead's pick; `m7/t13` (arm B) stays unmerged. No Tripo spend this round; Gemini capped at $27 of the $35 (G2 $12, G3 $15).
+- **Running:** workflow `m7-adjust-round`, run `wf_6cc60e60-9df`, script `~/.claude/projects/-Users-arachne-repos-beat-em-up-PoC/4532b8a7-9eb5-41f2-9651-88f769f37f0b/workflows/scripts/m7-adjust-round-wf_6cc60e60-9df.js`. CFO rows T22 to T26 (started), T27 is the gate.
+  - Fix, four Sonnet builders in `.worktrees/m7-g1..g4` on `m7/g1..g4`: G1 shader owner (damage blotches at full health, drawn line and rim, post softness and grain), G2 Gemini-painted Punk face and player gloves, G3 Gemini-painted street sheets, sparse brick, hand-drawn fence card, G4 light pools, window rows, wisp outline, rooms under the trailer look, a night-street arms act (`docs/milestones/M7-calls/g4.md`).
+  - Then an Opus merge (order g1, g3, g4, g2; full suite), a Sonnet frame-time pass (`captures/m7-slice/perf3/`), a Sonnet re-record into `captures/m7-slice/merged3/` with judge sets in `judge3/` (keys in `judge3_keys/`) and a reel in `gate1b/`, then three blind Opus judges and scoring.
+- **Resume if cut off:** re-invoke the Workflow tool with that `scriptPath` and `resumeFromRunId: "wf_6cc60e60-9df"` in the same session; in a new session, check which of `m7/g1..g4` carry an "M7 G" commit, re-run only the missing packages from the script's briefs, then the later stages in order.
+- **Next (T27):** send Game-boy the reel and the numbers. If the judge still sits near M6's 0.94, recommend stopping the painted-asset route.
+
+### 2026-11-11 17:10: M7 Gate 1 sent to Game-boy; the slice fails both measured gates
+- `m7/trailer-look` holds the slice plus one fix wave (F1 character colour, F2 paint and faces, F3 light shapes). 2150 tests; the full suite was not re-run after the last preset fix (`test_tuning_panel.gd` re-run alone, 28/28).
+- **Blind judge (captures/m7-slice/judge2, keys in judge2_keys):** street 0.80, arms 0.92, Punk turnaround 0.88. Same shuffle: trailer 0.35 (0.12 to 0.55), references 0.12, M6 0.94. The gate (inside the trailer's spread) is missed by a wide margin.
+- **Frame time (captures/m7-slice/perf3/report.txt, T24; perf2 was before the merge):** M6 10.90 ms, trailer 10.15 ms, **-6.9%** against a +10% gate (it was +9.7% at 7f8528a). Calls: docs/milestones/M7-calls/t24.md.
+- **Arm B** (new Tripo Punk) is on `m7/t13`, not merged: better fists and vest, worse cap. Tunable `trailer_punk_arm`. The A or B pick is open.
+- **Known faults:** translucent grey and purple blotches (damage marks) on full-health Punks; star-edged ground pools; exact window grids and chain-link; the training room and dummy are still plain toon under the trailer profile; kit sheets and character paint are procedural stand-ins (Gemini was out of credit until 15:53, now +$35).
+- **Waiting on Game-boy:** go, adjust or stop (Slack DM and chat, reel in captures/m7-slice/gate1/). Nothing is running. Resume: act on his answer; if adjust, the next round is in the chat summary (blotch bug, frame time, Gemini-painted sheets and faces, arm pick).
+
+
+### 2026-11-11 17:15 CST: the fix wave F1-F3 merged (2150/2150); slice re-recorded; frame time +22.6%; blind judge sets ready (T20)
+- **Merged** (`--no-ff`, no conflicts): F1 paint keeps local colour (628937d), F3 street FX (54bb1c3), F2 painted face, folds and glove ink (773c6f2). The merge left F3's five tunables out of `tuning/default.json`; regenerated (a309682). Suite: 2150 tests; the one failure (the preset) fixed and its file re-run green.
+- **Slice:** `captures/m7-slice/merged2/` (`INDEX.md`; same commands and frames as `merged/`; every bot log matches; m6 stills unchanged but for random impact words).
+- **Still reads as 3D (lead's look):** the Punk's vest and arms carry big translucent grey/purple blotches (the damage marks) and a purple smear over the face; the dummy and roof in the training room are plain m6-ish toon; the far facades are exact window grids and the chain-link is exact perspective; ground pools keep a star edge; the turnaround's shadow is a crisp shadow map.
+- **Frame time** (Mission 1 level walk, `perf_level_bot`, vsync on, interleaved m6/trailer, 4 runs each, load 2.9-4.9; `captures/m7-slice/perf2/report.txt`): m6 median 11.05 ms, trailer 13.55 ms, **+22.6%** (p95 14.89 to 17.08). Over the +10% gate.
+- **Judge sets:** `captures/m7-slice/judge2/run{1,2,3}` (seeds 101/202/303; 73 images each: trailer 25, refs 8, cand_street 8, cand_arms 8, cand_punk 8, m6 16; 13 contact sheets each). Keys and inputs in `captures/m7-slice/judge2_keys/` (judges must not open it).
+- **Next:** T21 in `.claude/cfo/plan.md` (judge the sets, score them).
+
+### 2026-11-11 15:55 CST: M7 Phase 1 merged on `m7/trailer-look` (2149/2149); the slice recorded under both profiles (T17)
+- **Merged** (`--no-ff`, in order): T11 painted material, T10 night street, T15 trailer kit (8a52933), T16a street FX (d337cce), T12 trailer Punk (0f43afd), T14 hero arms (9e3a7fb). T13 not merged (blocked on Gemini credit, docs only). Conflicts were text only (ARCHITECTURE, ASSETS, tuning_data); T10's "Night street (T10)" tuning group had landed after Debug and now sits before "Look profile"; `tuning/default.json` regenerated.
+- **Glue and fixes** (d59cac1, a1378b8): the night street calls `ToonMaterials.set_area_look()` (NightLook `paint_shadow_hue`, `paint_rim_color`) and clears it on leaving; TrailerLook puts the level's light back on the procedural sky on a flip back (m6's sky kept the night colours); ASSETS row for T10's street matte; `combo_bot.gd --clean` (no caption, combat log, sound-room line); the Punk stage takes `--profile=m6`.
+- **Tests edited (the lead's decision):** `test_look_profile.gd` (the marker-only and "street sun stays" pins replaced: trailer changes sky, light, kit sheets and art; back restores m6 exactly, now including every light and the shaders), `test_toon_painted.gd` (under trailer the trim's own uniforms hold except T15's `trim_tex`, `ground_tex`, `strips`). Suite: 2149 tests, all pass, 0 SCRIPT/SHADER ERROR (486 s).
+- **Trailer as the default:** a run with the TuningData default set to 1 (reverted) fails 41 of 2149, all tests written to start from m6 (m6 meshes, sheets, art, "flip to trailer"); no cheap switch exists. In it the M5 level run took 158 s against its 120 s budget (headless): worth a perf look.
+- **Recording:** `captures/m7-slice/merged/` (`INDEX.md`; `m6/` and `trailer/` stills and 2 s clips at 1600x900, same moments; `raw/` the AVIs and A/B sheets).
+- **Open:** T14's ask (trailer arms and Punk skin come out salmon and electric blue outside the night street: the shadow hue and rim on the roof and training room); the barrel's halo reads as a flat orange disc behind it; T15's emissive window strip flag and T10's lamp attenuation request to T11; T16a shaders not warmed up (first-flip hitch); T13 waits on credit.
+- **Next:** T18 to T21 in `.claude/cfo/plan.md`.
+
+### 2026-11-11 13:45 CST: M7 Phase 0 merged (2095/2095); the bar is set; Phase 1's slice builders running
+- **Phase 0 is merged** on `m7/trailer-look` (e2da1b7): the trailer reference set (`assets/source/trailer_ref/`), the judge and style meter (`tools/look/`, baseline in `tools/look/baseline.md`), the look profile switch (F7; `game/fx/look_profile.gd`) and the per-profile art swap (`game/fx/art_look.gd`, variant on `metadata/trailer`). The look target is `docs/milestones/M7-look-target.md`.
+- **The bar:** blind p_3d, trailer 0.09 (0.05 to 0.14), references 0.07, M6 0.93. The gate is a median at or below 0.19 and frame time at most +10% over M6.
+- **Running:** workflow `m7-phase1-slice` (run `wf_846b53e2-463`; script under this session's `workflows/scripts/`). Wave 1: T10 light (`m7/t10`), T11 shaders (`m7/t11`), T15 surfaces (`m7/t15`), T16a effects (`m7/t16a`), each in `.worktrees/m7-<key>`. Then T12 Punk arm A on T11's branch, then T13 Punk arm B (Tripo, 55 credits, hard cap) and T14 player arms on T12's branch. Builders log paid spend in `docs/milestones/M7-calls/<key>.md`.
+- **Usage at launch:** 5-hour 7%, weekly 2%.
+- **Resume steps:** a branch is done when it has a commit starting "M7 T<n>:"; otherwise restart that builder from its newest `wip:` commit with the brief in the workflow script. When all seven are done: T17 in `.claude/cfo/plan.md` (merge T11 first, suite under both profiles, record the slice once), then T18 to T21.
+
+### 2026-11-11 09:15 CST: Game-boy approved the M7 plan; PR #6 merged; Phase 0 running on `m7/trailer-look`
+- **His answers** (Slack DM, 08:52 CST; recorded in README, "Where M7 departs from the spec"): reorder approved and PR #6 merged as M6's completion; designs approved but **Ox keeps his M6 colouring**; both look-bible limits lifted for the `trailer` profile; spend approved (DM him if Gemini or Tripo needs credit); the bar is as written.
+- **M6 is closed.** Its four open questions (near arm, frame time, Kicker's eyes, new Tripo models) are overtaken by M7's art work; frame time moves to M8.
+- **New standing rule (Game-boy, 2026-11-11, chat):** a low-effort heartbeat forwards his Slack DMs into the working session, and they count as decisions made in chat. Session "Beat-em-up: Slack relay" (Haiku, low, 20 minutes; state `captures/slack_relay_state.json`). Restart it with the watcher at every takeover. Only one session may be titled "Beat-em-up: working session".
+- **Running:** the usage watcher, the Slack relay, and Phase 0 of `.claude/cfo/plan.md` (T02 to T05b in `.worktrees/m7-ref` and `.worktrees/m7-profile`; T01, the look target sheet, by the lead).
+- **Resume steps:** read `.claude/cfo/plan.md`: rows without a tick are open, in order. Merge any finished `m7/p0-*` branch into `m7/trailer-look` after the suite passes.
+
 ### 2026-11-10 22:20 CST: a plan to make the trailer's look playable (proposed Milestone 7); waiting on Game-boy's review
 - **Game-boy asked** (working session chat) for the finished trailer's graphics to be made playable in the game, planned with `/cfo-plan`, Fable for high-level decisions only, and a plan for his review before any work.
 - **The plan:** `docs/milestones/M7-trailer-look-plan.md` (reasoning, gates, five questions for him) and `.claude/cfo/plan.md` (31 rows with model, effort and done-when; follow its Execute section). Written from five read-only scouts and revised after two critics. Nothing is built; no branch is made.

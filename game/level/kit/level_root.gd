@@ -82,6 +82,7 @@ var _light_is_default: bool = false
 
 func _ready() -> void:
 	add_to_group(GROUP)
+	Tuning.changed.connect(_on_tuning_changed)
 	RoomKit.build_environment(self)
 	container = Node3D.new()
 	container.name = "Sections"
@@ -113,6 +114,7 @@ func _ready() -> void:
 	_place_pickups()
 	if with_presentation:
 		RoomKit.build_presentation(self)
+		add_child(TrailerLook.new())
 	_index_route()
 	if start_arena > 0:
 		start_at_arena(start_arena)
@@ -272,9 +274,19 @@ func section_light_progress() -> float:
 
 ## The light `section` calls for.
 func light_for(section: LevelSection) -> Dictionary:
+	var light: Dictionary
 	if section != null and section.light_enabled and Tuning.data.section_light_enabled:
-		return section.light()
-	return default_light()
+		light = LookProfile.resolve_light(section.light())
+	else:
+		light = LookProfile.resolve_light(default_light())
+	# The trailer profile's own place looks (M7, T10): the profile's rows that are not a light are dropped, and the
+	# section's night look, when it has one, lays its colour script over the light.
+	light = NightLook.strip_rows(light)
+	var look := NightLook.for_location(section.look_location) if section != null else null
+	if look != null:
+		light = light.duplicate()
+		light.merge(look.light(), true)
+	return light
 
 
 ## The blend of two lights at `t` (0 to 1, eased): colours and numbers lerp, the sun's yaw the short way.
@@ -292,6 +304,17 @@ static func blend_light(a: Dictionary, b: Dictionary, t: float) -> Dictionary:
 		else:
 			out[key] = lerpf(float(from), float(b[key]), e)
 	return out
+
+
+## A flip of the look profile (F7) puts its light on the level at once, with no blend.
+func _on_tuning_changed(property: StringName) -> void:
+	if (property == &"look_profile" or property == &"") and _section_index >= 0:
+		_retarget_light(true)
+
+
+func _exit_tree() -> void:
+	if Tuning.changed.is_connected(_on_tuning_changed):
+		Tuning.changed.disconnect(_on_tuning_changed)
 
 
 ## Aim the blend at the current section's light (snapping when it is the first or the blend is 0).

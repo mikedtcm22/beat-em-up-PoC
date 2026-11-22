@@ -1,0 +1,234 @@
+{
+ "seed": 5,
+ "layout": {
+  "default_weight": 1.0,
+  "margin_px": 12,
+  "weights": {
+   "Head": 2.4,
+   "Neck": 1.2,
+   "LeftHand": 1.4,
+   "RightHand": 1.4
+  }
+ },
+ "regions_from_atlas": {
+  "shade": 0.68,
+  "tint": [
+   50,
+   50,
+   110
+  ]
+ },
+ "regions": {
+  "cell_50": {
+   "base": [
+    56,
+    52,
+    62
+   ],
+   "shade": [
+    34,
+    32,
+    42
+   ],
+   "class": 255
+  },
+  "cell_53": {
+   "base": [
+    124,
+    118,
+    130
+   ],
+   "shade": [
+    78,
+    74,
+    92
+   ],
+   "class": 255
+  },
+  "cell_54": {
+   "base": [
+    36,
+    32,
+    42
+   ],
+   "shade": [
+    20,
+    18,
+    28
+   ],
+   "class": 255
+  },
+  "cell_51": {
+   "base": [
+    255,
+    116,
+    26
+   ],
+   "shade": [
+    206,
+    76,
+    20
+   ],
+   "class": 230
+  },
+  "cell_7": {
+   "base": [
+    224,
+    150,
+    100
+   ],
+   "shade": [
+    190,
+    100,
+    58
+   ],
+   "class": 204,
+   "shadow": 0.0
+  }
+ },
+ "rules": [],
+ "shadows": {
+  "hint": [],
+  "designed": [
+   {
+    "region": [
+     "cell_7"
+    ],
+    "shape": {
+     "c": [
+      0.0,
+      0.13,
+      1.621
+     ],
+     "r": [
+      0.068,
+      0.06,
+      0.011
+     ],
+     "soft": 0.1,
+     "wobble": 0.06
+    },
+    "amount": 1.0
+   },
+   {
+    "region": [
+     "cell_7"
+    ],
+    "shape": {
+     "c": [
+      0.0,
+      0.1,
+      1.518
+     ],
+     "r": [
+      0.09,
+      0.07,
+      0.015
+     ],
+     "soft": 0.1
+    },
+    "amount": 1.0
+   }
+  ]
+ },
+ "ink": {
+  "border_px": 3,
+  "border_strength": 0.95,
+  "crease_strength": 0.0,
+  "crease_skip_bones": [
+   "Head"
+  ]
+ },
+ "hull": {
+  "base": 0.62,
+  "variation": 0.3,
+  "taper_ends": [
+   "LeftHand",
+   "RightHand",
+   "LeftToes",
+   "RightToes"
+  ],
+  "taper": 0.55,
+  "taper_m": 0.07
+ },
+ "folds": [],
+ "marks": [
+  {
+   "channel": "R",
+   "shape": {
+    "c": [
+     0.056,
+     0.125,
+     1.585
+    ],
+    "r": [
+     0.026,
+     0.05,
+     0.016
+    ],
+    "angle_deg": 30,
+    "soft": 0.12,
+    "wobble": 0.22,
+    "wobble_mm": 16
+   }
+  },
+  {
+   "channel": "G",
+   "shape": {
+    "c": [
+     -0.034,
+     0.125,
+     1.608
+    ],
+    "r": [
+     0.026,
+     0.05,
+     0.011
+    ],
+    "soft": 0.12,
+    "wobble": 0.2,
+    "wobble_mm": 14,
+    "seed": 5
+   }
+  },
+  {
+   "channel": "B",
+   "shape": {
+    "c": [
+     0.012,
+     0.13,
+     1.545
+    ],
+    "r": [
+     0.015,
+     0.05,
+     0.007
+    ],
+    "soft": 0.12,
+    "wobble": 0.18,
+    "wobble_mm": 10,
+    "seed": 7
+   }
+  }
+ ],
+ "normals": [
+  {
+   "bones": [
+    "Spine",
+    "Chest",
+    "UpperChest",
+    "Neck"
+   ],
+   "rings": 8,
+   "strength": 0.9
+  },
+  {
+   "bones": [
+    "Head"
+   ],
+   "rings": 3,
+   "strength": 0.5
+  }
+ ],
+ "grain": 0.0
+}

@@ -8,11 +8,16 @@ extends GutTest
 ## samples it in world metres with its mips unlimited (the strips keep the capped mip and fade their ink), and the Debug switch
 ## gives the sheet's own asphalt back. The colliders are unchanged (tests/test_m6_colliders.gd).
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const Snapshot := preload("res://tests/m6_collider_snapshot.gd")
 const Scan := preload("res://tests/m6_coplanar_scan.gd")
 ## Ink pixels thinner than this (the shorter of the pixel's two straight runs) are tips and rounding only.
 const MIN_RUN := 4
 const RUN_CAP := 12
+
+
+func before_each() -> void:
+	LookProfileHelper.use_m6()
 
 
 func after_each() -> void:

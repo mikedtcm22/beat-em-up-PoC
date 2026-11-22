@@ -43,7 +43,7 @@ func clipped_rects(axis: int, side: int) -> Array[Rect2]:
 ## The drawn box: the kit's module with the overlaps taken out of it. A flat box (the editor, the graybox switch) is not clipped.
 func _make_mesh(material: Material) -> MeshInstance3D:
 	var art := _art()
-	var mesh := RoomKit.box_mesh(size, material, _overlay(art), art)
+	var mesh := RoomKit.box_mesh(size, material, _overlay(art), art, _variant())
 	if not RoomKit.kit_art(art) or not (mesh.mesh is ArrayMesh):
 		return mesh
 	for path: NodePath in unresolved_yields():

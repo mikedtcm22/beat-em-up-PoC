@@ -40,19 +40,27 @@ const STEP_RISE_M := 0.18
 const PLINTH_MIN_WIDTH_M := 1.0
 const PLINTH_MIN_HEIGHT_M := 3.0
 
+## The trailer profile's drawn fence (M7 G3, C4; tools/gen_trailer_kit.py): an alpha card of posts, rails and boards the chain-link faces draw in place of the sheet's lattice.
+const FENCE_CARD_PATH := "res://assets/export/kit/trailer_fence_card.png"
+
 static var _cache: Dictionary = {}
+static var _fence_wired: bool = false
 
 
-## The mesh of `kind` at `size`, or null for `&"box"`, `&""` and a kind that does not exist.
-static func build(kind: StringName, size: Vector3) -> ArrayMesh:
+## The mesh of `kind` at `size`, or null for `&"box"`, `&""` and a kind that does not exist. Under the trailer profile the
+## faces' UVs follow its sheet (`u_m` per strip) and `variant` (TrimSheet.variant_for, -1 for none) moves each face on it; under
+## M6's profile `variant` is ignored and the mesh is M6's, the very object a call without it returns.
+static func build(kind: StringName, size: Vector3, variant: int = -1) -> ArrayMesh:
 	if not KINDS.has(kind):
 		return null
 	size = size.max(Vector3(0.001, 0.001, 0.001))
 	var key := "%s|%.3f|%.3f|%.3f" % [kind, size.x, size.y, size.z]
+	var b := Builder.new(variant)
+	if b.trailer:
+		key += "|t%d|%.2f" % [variant, Tuning.data.trailer_fence_card_h_m]
 	var cached: ArrayMesh = _cache.get(key)
 	if cached != null:
 		return cached
-	var b := Builder.new()
 	match kind:
 		&"wall":
 			_wall(b, size)
@@ -99,14 +107,40 @@ static func build(kind: StringName, size: Vector3) -> ArrayMesh:
 ## collider steps): `size` is (width, rise, run), the mesh centred on that box.
 static func build_stairs(width: float, rise: float, run: float, count: int) -> ArrayMesh:
 	var key := "stairs|%.3f|%.3f|%.3f|%d" % [width, rise, run, count]
+	var b := Builder.new()
+	if b.trailer:
+		key += "|t"
 	var cached: ArrayMesh = _cache.get(key)
 	if cached != null:
 		return cached
-	var b := Builder.new()
 	_stairs(b, Vector3(width, rise, run), maxi(count, 1))
 	var mesh := b.finish()
 	_cache[key] = mesh
 	return mesh
+
+
+## Puts the running profile's chain-link on the wire material (`ToonMaterials.trim_scissor()`): under the trailer profile the painted fence card
+## and its size in metres, under M6's the sheet's lattice (`fence_on` 0). `finish()` calls it for every mesh it builds, and a flip of the profile
+## (or of the card's size) calls it again, so cached meshes of either profile draw right after a flip.
+static func sync_fence() -> void:
+	var wire := ToonMaterials.trim_scissor()
+	var on := TrimSheet.is_trailer()
+	wire.set_shader_parameter(&"fence_on", 1.0 if on else 0.0)
+	if on:
+		wire.set_shader_parameter(&"fence_tex", load(FENCE_CARD_PATH) as Texture2D)
+		wire.set_shader_parameter(&"fence_card", Vector2(Tuning.data.trailer_fence_card_w_m, Tuning.data.trailer_fence_card_h_m))
+	else:
+		# back to M6's: the card's uniforms unset, so the material is M6's exactly (test_look_profile's round trip)
+		wire.set_shader_parameter(&"fence_tex", null)
+		wire.set_shader_parameter(&"fence_card", null)
+	if not _fence_wired:
+		_fence_wired = true
+		Tuning.changed.connect(_on_tuning_changed)
+
+
+static func _on_tuning_changed(property: StringName) -> void:
+	if property == &"" or property == &"look_profile" or property == &"trailer_fence_card_w_m" or property == &"trailer_fence_card_h_m":
+		sync_fence()
 
 
 ## The triangles of a mesh.
@@ -155,7 +189,17 @@ static func _crate(b: Builder, size: Vector3) -> void:
 
 
 static func _skyline(b: Builder, size: Vector3) -> void:
-	b.box(Vector3.ZERO, size, {sides = &"facade", top = &"concrete", bottom = &"concrete"})
+	var period := TrimSheet.period_m(&"facade")
+	if b.trailer and size.y > period * 1.5:
+		# e-street: a tall facade is stacked bands of one strip period, each its own box so its face takes its own U offset and
+		# mirror (the strip does not vary V), and no two floors repeat the same window row.
+		var count := ceili(size.y / period - 0.0001)
+		for i in count:
+			var y0 := -size.y * 0.5 + period * i
+			var band := minf(period, size.y - period * i)
+			b.box(Vector3(0.0, y0 + band * 0.5, 0.0), Vector3(size.x, band, size.z), {sides = &"facade", top = &"concrete", bottom = &"concrete"})
+	else:
+		b.box(Vector3.ZERO, size, {sides = &"facade", top = &"concrete", bottom = &"concrete"})
 	var cap := 0.5
 	b.box(Vector3(0.0, size.y * 0.5 + cap * 0.5, 0.0), Vector3(size.x + 0.4, cap, size.z + 0.4), {all = &"trim"})
 
@@ -282,6 +326,16 @@ class Builder:
 	## material of their own (see finish()).
 	var _opaque := Buffer.new()
 	var _wire := Buffer.new()
+	## Under the trailer profile: the sheet's own U scale per strip, and `variant` (-1: none) moving each face (TrimSheet.variation).
+	var trailer: bool = false
+	var variant: int = -1
+	var _face_n: int = 0
+	var _tile_m: float = 4.0
+
+	func _init(variant_id: int = -1) -> void:
+		trailer = TrimSheet.is_trailer()
+		variant = variant_id if trailer else -1
+		_tile_m = Tuning.data.kit_trim_m_per_tile
 
 	## A quad whose bottom-left corner is `origin`, running `width` along `right` and `height` along
 	## `up` (unit vectors; the face looks along right x up), with its UV at the corner `uv0` and one
@@ -290,6 +344,21 @@ class Builder:
 		if width <= 0.0 or height <= 0.0:
 			return
 		var normal := right.cross(up)
+		var u_step := 1.0
+		if trailer:
+			# The trailer's sheet: one repeat of a strip covers its own `u_m`, not Tuning's tile; a variant moves the face on it
+			# (an offset of U and V, a mirror of U, a tint).
+			var scale := _tile_m / float(TrimSheet.strip(strip).get("u_m", _tile_m))
+			var moved := TrimSheet.variation(strip, variant, _face_n)
+			_face_n += 1
+			var dir := -1.0 if bool(moved.flip) else 1.0
+			uv0 = Vector2((float(moved.u) + dir * uv0.x) * scale, uv0.y + float(moved.v))
+			u_step = dir * scale
+			var shift: Color = moved.tint
+			tint = Color(tint.r * shift.r, tint.g * shift.g, tint.b * shift.b)
+			if TrimSheet.is_scissor(strip):
+				# the fence card's top sits on the face's top (the shader reads v up from the face's bottom)
+				uv0.y += Tuning.data.trailer_fence_card_h_m - height
 		var color := Color(tint.r, tint.g, tint.b, float(TrimSheet.index(strip)) / 255.0)
 		var buffer := _wire if TrimSheet.is_scissor(strip) else _opaque
 		var base := buffer.verts.size()
@@ -298,8 +367,8 @@ class Builder:
 		buffer.verts.append(origin + right * width + up * height)
 		buffer.verts.append(origin + up * height)
 		buffer.uvs.append(uv0)
-		buffer.uvs.append(uv0 + Vector2(width, 0.0))
-		buffer.uvs.append(uv0 + Vector2(width, height))
+		buffer.uvs.append(uv0 + Vector2(width * u_step, 0.0))
+		buffer.uvs.append(uv0 + Vector2(width * u_step, height))
 		buffer.uvs.append(uv0 + Vector2(0.0, height))
 		for i in 4:
 			buffer.normals.append(normal)
@@ -331,6 +400,8 @@ class Builder:
 	## is two (its frame and its wire).
 	func finish() -> ArrayMesh:
 		var mesh := ArrayMesh.new()
+		TrimSheet.ensure_wired()
+		KitMesh.sync_fence()
 		for pair: Array in [[_opaque, ToonMaterials.trim()], [_wire, ToonMaterials.trim_scissor()]]:
 			var buffer: Buffer = pair[0]
 			if buffer.verts.is_empty():

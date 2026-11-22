@@ -71,9 +71,25 @@ world/region_use_async_iterations=false
 common/physics_ticks_per_second=60
 common/max_physics_steps_per_frame=8
 
+[shader_globals]
+
+paint_trim_grain={
+"type": "vec2",
+"value": Vector2(0, 90)
+}
+paint_flash_hard={
+"type": "vec2",
+"value": Vector2(0, 1)
+}
+paint_key_dir={
+"type": "vec3",
+"value": Vector3(0.4, 0.8, 0.45)
+}
+
 [rendering]
 
 textures/vram_compression/import_etc2_astc=true
 
 renderer/rendering_method="forward_plus"
 anti_aliasing/quality/msaa_3d=2
+environment/glow/upscale_mode=0

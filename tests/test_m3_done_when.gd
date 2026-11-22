@@ -20,6 +20,7 @@ extends GutTest
 ##    from the opening Punk waves (1 and 2) and from the mixed ones (3 and 4: Punk, Kicker, Thug and
 ##    Bruiser together), with R1 and R3 held in both.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const ROOM_PATH := "res://game/level/crowd_room.tscn"
 const Probe := preload("res://tests/bot/readability_probe.gd")
 const Pilot := preload("res://tests/bot/autopilot.gd")
@@ -354,6 +355,8 @@ func _value_of(rows: Array[Dictionary], id: String) -> String:
 
 ## The 1500-frame mixed soak; returns the act's summary after asserting the hard rows.
 func _mixed_six_soak(even_spread: bool) -> Dictionary:
+	# The trailer look's entrance cards hold the simulation; the soak counts its 1500 frames, so it runs without them.
+	LookProfileHelper.no_cards()
 	Tuning.data.director_even_spread = even_spread
 	_room = await _room_up(true)
 	var probe := Probe.new()

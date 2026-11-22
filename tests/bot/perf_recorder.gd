@@ -31,10 +31,37 @@ var _known: Dictionary = {}
 ## is not: close() reports their means.
 var _counter_sums: Dictionary = {}
 var _counter_max: Dictionary = {}
+## T54, the engine's own per-frame costs (ms), none of which depends on the display's refresh: the renderer's
+## CPU time (main viewport + frame setup, as _count_frame), its GPU time, and the engine's process and physics
+## times (Performance.TIME_PROCESS / TIME_PHYSICS_PROCESS). SubViewports in the tree, if any, add to the render times.
+var _eng_cpu: PackedFloat32Array = PackedFloat32Array()
+var _eng_gpu: PackedFloat32Array = PackedFloat32Array()
+var _eng_proc: PackedFloat32Array = PackedFloat32Array()
+var _eng_phys: PackedFloat32Array = PackedFloat32Array()
+## Also timed here (ms): `sim` = this frame's process_frame to frame_pre_draw (scripts and nodes), `draw` =
+## frame_pre_draw to frame_post_draw (the render submit and the swapchain, so it holds the wait for the display).
+var _eng_sim: PackedFloat32Array = PackedFloat32Array()
+var _eng_draw: PackedFloat32Array = PackedFloat32Array()
+var _frame_start_us: int = 0
+var _pre_draw_us: int = 0
+var _sub_viewports: Array[RID] = []
 
 
 func _ready() -> void:
 	CombatEvents.hit_landed.connect(_on_hit)
+	RenderingServer.frame_pre_draw.connect(_on_pre_draw)
+	RenderingServer.frame_post_draw.connect(_on_post_draw)
+
+
+func _on_pre_draw() -> void:
+	_pre_draw_us = Time.get_ticks_usec()
+	if recording and _frame_start_us > 0:
+		_eng_sim.append(float(_pre_draw_us - _frame_start_us) / 1000.0)
+
+
+func _on_post_draw() -> void:
+	if recording and _pre_draw_us > 0:
+		_eng_draw.append(float(Time.get_ticks_usec() - _pre_draw_us) / 1000.0)
 
 
 ## Start a window (the last one must have been closed).
@@ -49,7 +76,18 @@ func open() -> void:
 	_known.clear()
 	_counter_sums.clear()
 	_counter_max.clear()
+	_eng_cpu = PackedFloat32Array()
+	_eng_gpu = PackedFloat32Array()
+	_eng_proc = PackedFloat32Array()
+	_eng_phys = PackedFloat32Array()
+	_eng_sim = PackedFloat32Array()
+	_eng_draw = PackedFloat32Array()
 	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
+	_sub_viewports.clear()
+	for node: Node in get_tree().root.find_children("*", "SubViewport", true, false):
+		var rid := (node as SubViewport).get_viewport_rid()
+		RenderingServer.viewport_set_measure_render_time(rid, true)
+		_sub_viewports.append(rid)
 	recording = true
 	_sample()
 
@@ -72,9 +110,10 @@ func _sample() -> void:
 	var last := Time.get_ticks_usec()
 	while recording:
 		await tree.process_frame
+		_frame_start_us = Time.get_ticks_usec()
 		if not recording:
 			return
-		var now := Time.get_ticks_usec()
+		var now := _frame_start_us
 		_ms.append(float(now - last) / 1000.0)
 		_stamp.append(float(now) / 1000000.0)
 		last = now
@@ -102,6 +141,15 @@ func _count_frame() -> void:
 		render_cpu_ms = RenderingServer.viewport_get_measured_render_time_cpu(rid) + RenderingServer.get_frame_setup_time_cpu(),
 		render_gpu_ms = RenderingServer.viewport_get_measured_render_time_gpu(rid),
 	}
+	var gpu := float(values.render_gpu_ms)
+	var cpu := float(values.render_cpu_ms)
+	for sub in _sub_viewports:
+		cpu += RenderingServer.viewport_get_measured_render_time_cpu(sub)
+		gpu += RenderingServer.viewport_get_measured_render_time_gpu(sub)
+	_eng_cpu.append(cpu)
+	_eng_gpu.append(gpu)
+	_eng_proc.append(float(Performance.get_monitor(Performance.TIME_PROCESS)) * 1000.0)
+	_eng_phys.append(float(Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS)) * 1000.0)
 	for key: String in values:
 		_counter_sums[key] = float(_counter_sums.get(key, 0.0)) + float(values[key])
 		_counter_max[key] = maxf(float(_counter_max.get(key, 0.0)), float(values[key]))
@@ -113,6 +161,65 @@ func counter_means() -> Dictionary:
 	for key: String in _counter_sums:
 		out[key] = snappedf(float(_counter_sums[key]) / float(maxi(_ms.size(), 1)), 0.01)
 	return out
+
+
+## Median, 95th percentile and mean of a series (ms), rounded.
+static func _series_stats(series: PackedFloat32Array) -> Dictionary:
+	if series.is_empty():
+		return {}
+	var sorted := series.duplicate()
+	sorted.sort()
+	var sum := 0.0
+	for value in series:
+		sum += value
+	return {
+		p50 = snappedf(sorted[int(floor(0.5 * (sorted.size() - 1)))], 0.001),
+		p95 = snappedf(sorted[int(floor(0.95 * (sorted.size() - 1)))], 0.001),
+		mean = snappedf(sum / float(series.size()), 0.001),
+	}
+
+
+## T54: the engine's own frame costs over the window, none of which waits on the display's refresh except
+## `draw` and `wall`. Per frame: `cpu` / `gpu` = the renderer's CPU and GPU times (gpu is 0 on Metal: the
+## driver reports no timestamps), `sum` = cpu + gpu, `proc` / `phys` = Performance TIME_PROCESS /
+## TIME_PHYSICS_PROCESS (TIME_PROCESS spans the whole frame, swapchain wait included), `sim` and `draw` as
+## the vars above, `wall` = the frame's wall time, and `work` = phys + sim + cpu: the CPU work in a frame,
+## which no refresh can inflate. `over_work_pct` is the share of frames whose `work` is above `budget_ms`;
+## `missed_pct` the share whose wall time is past 1.5 refreshes of it (a refresh missed).
+func engine_costs(budget_ms: float = 16.7) -> Dictionary:
+	var n := mini(mini(_eng_cpu.size(), _eng_sim.size()), mini(_eng_draw.size(), _ms.size()))
+	var sum := PackedFloat32Array()
+	var work := PackedFloat32Array()
+	var wall := PackedFloat32Array()
+	var over_work := 0
+	var missed := 0
+	var over_sum := 0
+	for i in n:
+		var s := _eng_cpu[i] + _eng_gpu[i]
+		var w := _eng_phys[i] + _eng_sim[i] + _eng_cpu[i]
+		sum.append(s)
+		work.append(w)
+		wall.append(_ms[_ms.size() - n + i])
+		over_work += int(w > budget_ms)
+		over_sum += int(s > budget_ms)
+		missed += int(wall[i] > budget_ms * 1.5)
+	var denom := float(maxi(n, 1))
+	return {
+		cpu = _series_stats(_eng_cpu),
+		gpu = _series_stats(_eng_gpu),
+		sum = _series_stats(sum),
+		proc = _series_stats(_eng_proc),
+		phys = _series_stats(_eng_phys),
+		sim = _series_stats(_eng_sim),
+		draw = _series_stats(_eng_draw),
+		wall = _series_stats(wall),
+		work = _series_stats(work),
+		over_sum_pct = snappedf(100.0 * float(over_sum) / denom, 0.01),
+		over_work_pct = snappedf(100.0 * float(over_work) / denom, 0.01),
+		missed_pct = snappedf(100.0 * float(missed) / denom, 0.01),
+		budget_ms = budget_ms,
+		sub_viewports = _sub_viewports.size(),
+	}
 
 
 ## The worst frame (ms) within HITCH_WINDOW_S after `stamp` (s); -1 when there was no such event.
@@ -160,5 +267,6 @@ func close() -> Dictionary:
 		hits = _hits,
 		stalls = stalls,
 		counters = counter_means(),
+		engine = engine_costs(),
 		vsync = VSYNC_NAMES[DisplayServer.window_get_vsync_mode()],
 	}

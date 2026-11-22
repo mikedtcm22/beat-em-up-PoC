@@ -23,6 +23,7 @@ extends GutTest
 ## Measure afresh (writes the ratchet; the lead does this at merges): M6_WRITE_RATCHET=1 tools/run_tests.sh
 ## -gselect=test_m6_no_placeholders.gd. Every run prints one `PLACEHOLDERS <scene> <category> <n>` line each.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const RATCHET_PATH := "res://tests/fixtures/m6/placeholder_ratchet.json"
 const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 const CROWD_PATH := "res://game/level/crowd_room.tscn"
@@ -44,6 +45,14 @@ const ALLOWED_NODE_NAMES: Array[String] = ["ToonWarmUp", "FlashWarmUp", "EdgeQua
 ## id -> {armed: bool (a rig with art), tint: bool, weapons: int (cylinder weapons it carries)}
 var _enemy_facts: Dictionary = {}
 var _player_has_art: bool = false
+
+
+func before_each() -> void:
+	LookProfileHelper.use_m6()
+
+
+func after_each() -> void:
+	LookProfileHelper.restore()
 
 
 func test_the_inventory_is_at_or_under_the_ratchet() -> void:

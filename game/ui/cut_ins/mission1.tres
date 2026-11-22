@@ -1,0 +1,93 @@
+[gd_resource type="Resource" script_class="CutInSet" load_steps=23 format=3]
+
+[ext_resource type="Script" path="res://game/ui/cut_in_set.gd" id="1_set"]
+[ext_resource type="Script" path="res://game/ui/cut_in_entry.gd" id="2_entry"]
+[ext_resource type="Texture2D" path="res://assets/export/ui/cut_ins/title.png" id="3_title"]
+[ext_resource type="Texture2D" path="res://assets/export/ui/cut_ins/punk_entrance.png" id="4_punk"]
+[ext_resource type="Texture2D" path="res://assets/export/ui/cut_ins/ko_punk_1.png" id="5_ko1"]
+[ext_resource type="Texture2D" path="res://assets/export/ui/cut_ins/ko_punk_2.png" id="6_ko2"]
+[ext_resource type="Texture2D" path="res://assets/export/ui/cut_ins/mission_end.png" id="7_end"]
+[ext_resource type="Texture2D" path="res://assets/export/ui/cut_ins/thug_entrance.png" id="8_thug"]
+[ext_resource type="Texture2D" path="res://assets/export/ui/cut_ins/bruiser_entrance.png" id="9_bru"]
+[ext_resource type="Texture2D" path="res://assets/export/ui/cut_ins/kicker_entrance.png" id="10_kick"]
+[ext_resource type="Texture2D" path="res://assets/export/ui/cut_ins/ox_name.png" id="11_ox"]
+[ext_resource type="Texture2D" path="res://assets/export/ui/cut_ins/ko_thug.png" id="12_kot"]
+[ext_resource type="Texture2D" path="res://assets/export/ui/cut_ins/ko_bruiser.png" id="13_kob"]
+[ext_resource type="Texture2D" path="res://assets/export/ui/cut_ins/ko_kicker.png" id="14_kok"]
+[ext_resource type="Texture2D" path="res://assets/export/ui/cut_ins/ko_ox.png" id="15_koo"]
+
+[sub_resource type="Resource" id="Resource_title"]
+script = ExtResource("2_entry")
+key = &"title"
+label = "MISSION 1"
+sub_label = "THE STREET"
+textures = Array[Texture2D]([ExtResource("3_title")])
+
+[sub_resource type="Resource" id="Resource_punk"]
+script = ExtResource("2_entry")
+key = &"punk"
+label = "STREET PUNK"
+textures = Array[Texture2D]([ExtResource("4_punk")])
+
+[sub_resource type="Resource" id="Resource_thug"]
+script = ExtResource("2_entry")
+key = &"thug"
+label = "PIPE THUG"
+textures = Array[Texture2D]([ExtResource("8_thug")])
+
+[sub_resource type="Resource" id="Resource_bruiser"]
+script = ExtResource("2_entry")
+key = &"bruiser"
+label = "BRUISER"
+textures = Array[Texture2D]([ExtResource("9_bru")])
+
+[sub_resource type="Resource" id="Resource_kicker"]
+script = ExtResource("2_entry")
+key = &"kicker"
+label = "KICKER"
+textures = Array[Texture2D]([ExtResource("10_kick")])
+
+[sub_resource type="Resource" id="Resource_ox"]
+script = ExtResource("2_entry")
+key = &"boss"
+label = "OX PELLERIN"
+textures = Array[Texture2D]([ExtResource("11_ox")])
+
+[sub_resource type="Resource" id="Resource_ko_punk"]
+script = ExtResource("2_entry")
+key = &"punk"
+textures = Array[Texture2D]([ExtResource("5_ko1"), ExtResource("6_ko2")])
+
+[sub_resource type="Resource" id="Resource_ko_thug"]
+script = ExtResource("2_entry")
+key = &"thug"
+textures = Array[Texture2D]([ExtResource("12_kot")])
+
+[sub_resource type="Resource" id="Resource_ko_bruiser"]
+script = ExtResource("2_entry")
+key = &"bruiser"
+textures = Array[Texture2D]([ExtResource("13_kob")])
+
+[sub_resource type="Resource" id="Resource_ko_kicker"]
+script = ExtResource("2_entry")
+key = &"kicker"
+textures = Array[Texture2D]([ExtResource("14_kok")])
+
+[sub_resource type="Resource" id="Resource_ko_boss"]
+script = ExtResource("2_entry")
+key = &"boss"
+textures = Array[Texture2D]([ExtResource("15_koo")])
+
+[sub_resource type="Resource" id="Resource_end"]
+script = ExtResource("2_entry")
+key = &"mission_end"
+label = "MISSION CLEAR!"
+textures = Array[Texture2D]([ExtResource("7_end")])
+
+[resource]
+script = ExtResource("1_set")
+title = SubResource("Resource_title")
+entrances = Array[ExtResource("2_entry")]([SubResource("Resource_punk"), SubResource("Resource_thug"), SubResource("Resource_bruiser"), SubResource("Resource_kicker"), SubResource("Resource_ox")])
+ko_panels = Array[ExtResource("2_entry")]([SubResource("Resource_ko_punk"), SubResource("Resource_ko_thug"), SubResource("Resource_ko_bruiser"), SubResource("Resource_ko_kicker"), SubResource("Resource_ko_boss")])
+mission_end = SubResource("Resource_end")
+end_prompt = "PRESS A BUTTON"

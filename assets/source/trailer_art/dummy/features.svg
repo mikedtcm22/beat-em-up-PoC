@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-150 -170 300 340">
+<!-- The training dummy's drawn marks (M7 e-rooms): a bullseye on the chest, a seam across the waist and shoulders, and a plain stitched face on the head dome: heavy brows, X button eyes, a stitched mouth. Millimetres over the front view, x to the viewer's right, y down. Colours are the M6 palette's. -->
+<g data-view="front" data-origin="0 1.712" data-px="4">
+ <g stroke-width="6.5" opacity="1.0" data-taper="0.05,0.35" data-wobble="0">
+  <path id="brow_l" d="M -70 -66 C -56 -70, -38 -66, -16 -58"/>
+  <path id="brow_r" d="M 70 -66 C 56 -70, 38 -66, 16 -58"/>
+ </g>
+ <g stroke-width="4.2" opacity="1.0" data-taper="0.1,0.1" data-wobble="0">
+  <path id="eye_l1" d="M -56 -50 L -32 -30"/><path id="eye_l2" d="M -32 -50 L -56 -30"/>
+  <path id="eye_r1" d="M 32 -50 L 56 -30"/><path id="eye_r2" d="M 56 -50 L 32 -30"/>
+ </g>
+ <g stroke-width="4.0" opacity="1.0" data-taper="0.1,0.1" data-wobble="0">
+  <path id="mouth" d="M -40 -2 C -14 4, 14 4, 40 -2"/>
+  <path id="st1" d="M -30 -8 L -30 6"/><path id="st2" d="M -15 -5 L -15 9"/><path id="st3" d="M 0 -4 L 0 10"/><path id="st4" d="M 15 -5 L 15 9"/><path id="st5" d="M 30 -8 L 30 6"/>
+ </g>
+</g>
+<g data-view="front" data-origin="0 1.26" data-px="4">
+ <path id="ring0" d="M 118 0 C 118 65.2, 65.2 118, 0 118 C -65.2 118, -118 65.2, -118 0 C -118 -65.2, -65.2 -118, 0 -118 C 65.2 -118, 118 -65.2, 118 0 Z" fill="ink" data-paint="#ead8b2" opacity="1.0" stroke-width="5" data-wobble="0"/>
+ <path id="ring1" d="M 90 0 C 90 49.7, 49.7 90, 0 90 C -49.7 90, -90 49.7, -90 0 C -90 -49.7, -49.7 -90, 0 -90 C 49.7 -90, 90 -49.7, 90 0 Z" fill="ink" data-paint="#a85a22" opacity="1.0" stroke-width="5" data-wobble="0"/>
+ <path id="ring2" d="M 62 0 C 62 34.2, 34.2 62, 0 62 C -34.2 62, -62 34.2, -62 0 C -62 -34.2, -34.2 -62, 0 -62 C 34.2 -62, 62 -34.2, 62 0 Z" fill="ink" data-paint="#ead8b2" opacity="1.0" stroke-width="5" data-wobble="0"/>
+ <path id="ring3" d="M 34 0 C 34 18.8, 18.8 34, 0 34 C -18.8 34, -34 18.8, -34 0 C -34 -18.8, -18.8 -34, 0 -34 C 18.8 -34, 34 -18.8, 34 0 Z" fill="ink" data-paint="#2e2a2a" opacity="1.0" stroke-width="5" data-wobble="0"/>
+ <g stroke-width="5.5" opacity="1.0" data-taper="0.05,0.05" data-wobble="0">
+  <path id="o1" d="M 118 0 C 118 65.2, 65.2 118, 0 118 C -65.2 118, -118 65.2, -118 0 C -118 -65.2, -65.2 -118, 0 -118 C 65.2 -118, 118 -65.2, 118 0 Z"/><path id="o2" d="M 62 0 C 62 34.2, 34.2 62, 0 62 C -34.2 62, -62 34.2, -62 0 C -62 -34.2, -34.2 -62, 0 -62 C 34.2 -62, 62 -34.2, 62 0 Z"/>
+ </g>
+ <g stroke-width="5" opacity="1.0" data-taper="0.1,0.1" data-wobble="0">
+  <path id="seam" d="M -230 -200 C -120 -208, 120 -208, 230 -200"/>
+ </g>
+</g>
+<g data-view="front" data-origin="0 1.04" data-px="4">
+ <g stroke-width="5" opacity="1.0" data-taper="0.04,0.04" data-wobble="0">
+  <path id="belt" d="M -170 0 C -80 8, 80 8, 170 0"/>
+ </g>
+</g>
+</svg>

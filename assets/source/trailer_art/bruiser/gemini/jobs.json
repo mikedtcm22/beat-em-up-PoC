@@ -1,0 +1,22 @@
+[
+ {
+  "out": "body_front.png",
+  "aspect": "3:4",
+  "size": "2K",
+  "refs": [
+   "ref_punk.png",
+   "in_body_front.png"
+  ],
+  "prompt": "Image 1 is the style reference: a frame from a hand-drawn 2D animated trailer (flat colour fills, a few heavy confident ink lines, no gradients, no texture, no photo detail); it shows a different, slimmer man. Image 2 is a plain grey 3D render of one heavy character standing in an A-pose, seen from the front: a purple padded jacket and hood, grey-slate armour plates on the chest and forearms, a cream belt, near-black trousers with grey knee pads, a helmet with a visor slot, a mask over the lower face, dark gloves and boots. Redraw image 2 as a finished flat-lit costume drawing in exactly the style of image 1, keeping the SAME pose, framing, proportions, silhouette (the same slim legs, the same arms, the same head size) and every garment edge of image 2 exactly where it is, pixel for pixel (it will be projected back onto the 3D model, so NOTHING may move or be resized), and its colours (muted purple, grey-slate, near-black, cream) as flat local fills. Add only drawn ink detail on top: the chest armour as separate bold plates (a pectoral plate each side, a sternum plate, ab plates), the shoulder straps, the forearm guards with strap lines, the belt buckle outline, the knee pad outlines, the visor outline and the mask folds. 4-6 bold ink fold lines on the puffy purple jacket and on each sleeve, a few bold creases on the trousers, and ONE flat designed shadow shape per big form. Lighting: flat soft front light, NO rim light, NO orange, NO gradients, NO photographic shading. Ink near-black, at least 5 px thick, confident, tapering. Plain flat mid-grey background, no text, no ground shadow."
+ },
+ {
+  "out": "body_back.png",
+  "aspect": "3:4",
+  "size": "2K",
+  "refs": [
+   "ref_punk.png",
+   "in_body_back.png"
+  ],
+  "prompt": "Image 1 is the style reference: a frame from a hand-drawn 2D animated trailer (flat colour fills, a few heavy confident ink lines, no gradients, no texture, no photo detail); it shows a different, slimmer man. Image 2 is a plain grey 3D render of one heavy character standing in an A-pose, seen from the BACK (the back of the jacket, the hood, the helmet): a purple padded jacket and hood, grey-slate armour plates on the chest and forearms, a cream belt, near-black trousers with grey knee pads, a helmet with a visor slot, a mask over the lower face, dark gloves and boots. Redraw image 2 as a finished flat-lit costume drawing in exactly the style of image 1, keeping the SAME pose, framing, proportions, silhouette (the same slim legs, the same arms, the same head size) and every garment edge of image 2 exactly where it is, pixel for pixel (it will be projected back onto the 3D model, so NOTHING may move or be resized), and its colours (muted purple, grey-slate, near-black, cream) as flat local fills. Add only drawn ink detail on top: the back armour plate and its straps, the hood folds, the forearm guards with strap lines, the knee pad straps. 4-6 bold ink fold lines on the puffy purple jacket and on each sleeve, a few bold creases on the trousers, and ONE flat designed shadow shape per big form. Lighting: flat soft front light, NO rim light, NO orange, NO gradients, NO photographic shading. Ink near-black, at least 5 px thick, confident, tapering. Plain flat mid-grey background, no text, no ground shadow."
+ }
+]

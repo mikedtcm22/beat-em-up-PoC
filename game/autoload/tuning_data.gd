@@ -1104,6 +1104,55 @@ extends Resource
 ## Real ticks the defender's rig flashes cyan on a perfect block (the parry flash).
 @export_range(0, 30, 1) var parry_flash_frames: int = 8
 
+@export_group("HUD (M7)")
+## The trailer look profile's HUD (Milestone 7, Phase 3, game/ui/hud_style.gd and the HUD parts): drawn comic caption boxes in the
+## same lettering as the cut-in cards (flat cream fill, a bold slightly uneven ink border, a hard offset drop shadow) and flat
+## ink-outlined bars with a hard-edged damage chunk that drops away. Read under look profile "trailer" only; the m6 HUD never reads them.
+## Flat colours: the caption box, the empty part of a bar, the ink (borders, lettering, shadows), the player's and the boss's bar, the damage chunk.
+@export var hud_m7_paper: Color = Color(0.98, 0.93, 0.78)
+@export var hud_m7_paper_shade: Color = Color(0.82, 0.75, 0.58)
+@export var hud_m7_ink: Color = Color(0.06, 0.05, 0.09)
+@export var hud_m7_health: Color = Color(1.0, 0.8, 0.14)
+@export var hud_m7_boss: Color = Color(0.72, 0.4, 0.95)
+@export var hud_m7_chunk: Color = Color(1.0, 0.5, 0.18)
+## The ink border's width (a multiplier on each element's own) and how far its edges stray from straight (px): the uneven hand-inked line.
+@export_range(0.5, 2.5, 0.05) var hud_m7_border_scale: float = 1.2
+@export_range(0.0, 5.0, 0.1) var hud_m7_wobble_px: float = 1.8
+## The hard drop shadow's offset (px, down and right) and the share of each element's slant kept (boxes sit nearly square).
+@export_range(0.0, 24.0, 0.5) var hud_m7_shadow_px: float = 8.0
+@export_range(0.0, 1.0, 0.05) var hud_m7_slant_scale: float = 0.25
+## A bar's ink outline (a multiplier on the element's own) and the offset (px) of the lettering's hard shadow.
+@export_range(0.5, 2.5, 0.05) var hud_m7_bar_outline_scale: float = 1.0
+@export_range(0.0, 8.0, 0.25) var hud_m7_text_shadow_px: float = 3.0
+## The damage chunk: it hangs where the lost health was for this long (s), then drops away over the fall time (s), by this many px, turning by this angle.
+@export_range(0.0, 1.5, 0.05) var hud_m7_chunk_hold_s: float = 0.3
+@export_range(0.1, 1.5, 0.05) var hud_m7_chunk_fall_s: float = 0.55
+@export_range(0.0, 300.0, 5.0) var hud_m7_chunk_drop_px: float = 110.0
+@export_range(0.0, 60.0, 1.0) var hud_m7_chunk_spin_deg: float = 22.0
+## The player's panel and the boss bar: their size (a multiplier, about the corner or edge they sit on) and an offset (px) from where they sit.
+@export_range(0.7, 1.4, 0.05) var hud_m7_scale: float = 1.0
+@export_range(-200.0, 200.0, 1.0) var hud_m7_offset_x: float = 0.0
+@export_range(-200.0, 200.0, 1.0) var hud_m7_offset_y: float = 0.0
+## The combat log (the HUD's debug line) shows from the start under the trailer profile; off, L still brings it up.
+@export var hud_m7_log_visible: bool = false
+## The empty part of a bar (the trough): dark ink, as m6's, so lost health reads against the cream panel.
+@export var hud_m7_trough: Color = Color(0.22, 0.2, 0.27)
+## The damage chunk's ink edge (px) and how much further than that the corners grow it, the share of its fall it fades over the end of, and
+## the share of the gauge's damage flash that turns the fill toward white.
+@export_range(0.0, 8.0, 0.1) var hud_m7_chunk_edge_px: float = 2.5
+@export_range(1.0, 3.0, 0.05) var hud_m7_chunk_edge_grow: float = 1.4
+@export_range(0.05, 1.0, 0.05) var hud_m7_chunk_fade_share: float = 0.3
+@export_range(0.0, 1.0, 0.05) var hud_m7_flash_share: float = 0.7
+## How far an inked outline may stray, as a share of the shorter side of its box (a thin bar stays a clean shape), and the stray under which it
+## stays the plain quad (px).
+@export_range(0.0, 0.5, 0.01) var hud_m7_wobble_max_share: float = 0.12
+@export_range(0.0, 1.0, 0.01) var hud_m7_wobble_min_px: float = 0.05
+## The boss bar's drawn box: the padding (px) around its name and bar, and the name's lettering size (px).
+@export_range(0.0, 40.0, 1.0) var hud_m7_boss_box_pad_px: float = 10.0
+@export_range(12.0, 48.0, 1.0) var hud_m7_boss_name_px: float = 26.0
+## The hit words and bursts keep clear of the player's panel and the boss bar by this much (px) under the trailer profile.
+@export_range(0.0, 80.0, 1.0) var hud_m7_pop_clear_px: float = 14.0
+
 @export_group("Sparring")
 ## Seconds from the start of one of a sparring dummy's jabs to the next (varied a little).
 @export_range(0.5, 10.0, 0.1) var sparring_interval_s: float = 2.0
@@ -1284,6 +1333,321 @@ extends Resource
 ## 0 leaves the sky untouched by the fog. A low value lets the skyline gaps show the dusk while the fog
 ## still softens it. Every room takes it (RoomKit.build_environment; LevelRoot keeps it live).
 @export_range(0.0, 1.0, 0.05) var section_fog_sky_affect: float = 0.3
+
+@export_group("Trailer kit")
+## The trailer look profile's kit (Milestone 7, T15): how many alternates a module has. Each block or piece on the street takes
+## one by a stable hash of its position (TrimSheet.variant_for), and a variant moves every face on the sheet (a U and V offset,
+## a mirror, a slight tint), so no two neighbouring walls or windows are the same picture. M6's profile has none.
+@export_range(1, 64, 1) var trailer_kit_variants: int = 12
+## How far a variant may nudge a face's tint (rgb) about white, warm or cool, in the strips that allow it (the walls, the
+## concrete, the facade): the slight non-uniformity of hand-painted planes.
+@export_range(0.0, 0.3, 0.005) var trailer_kit_tint_jitter: float = 0.07
+## M7 G3, C4: the trailer profile's drawn fence card (assets/export/kit/trailer_fence_card.png: posts, two rails and uneven boards) replaces
+## the chain-link lattice. The metres it covers, along the fence and up it (the card's top sits on the fence's top).
+@export_range(2.0, 16.0, 0.25) var trailer_fence_card_w_m: float = 8.0
+@export_range(1.0, 8.0, 0.25) var trailer_fence_card_h_m: float = 4.0
+## M7 e-street: the street props' flat fill under the trailer profile is lifted by this much (TrailerProp: the cars, the dumpsters and the
+## AC units were near black in the night light, so their shade edge and hull line read against nothing). 1 leaves the palette as it is.
+@export_range(0.5, 3.0, 0.05) var trailer_prop_lift: float = 1.5
+## M7 x-street: the street props' middle light band, as a share of the lit one, under the trailer profile (1: two flat tones, one shade edge; the
+## M6 art has three bands).
+@export_range(0.5, 1.0, 0.01) var trailer_prop_mid_level: float = 1.0
+## The shade tone's level under the trailer profile (the prop's models are lumpy: a deep shade cuts them into blotches, so the shade edge is a
+## faint one; 1 is no shade at all).
+@export_range(0.4, 1.0, 0.01) var trailer_prop_shadow_level: float = 0.8
+
+@export_group("Trailer street FX")
+## M7 T16a: the trailer profile's 2D street effects (outlined steam, grey wisps, the burn barrel's flame, embers),
+## drawn by StreetFx under look profile "trailer" only. Drawings per second the effects hold on (the trailer's twos).
+@export_range(4.0, 30.0, 1.0) var tfx_twos_hz: float = 12.0
+## How far a steam lobe's life a drawing moves it (one plume's life is 1 / (rate x twos_hz) seconds).
+@export_range(0.002, 0.05, 0.001) var tfx_steam_rate: float = 0.012
+## Steam plume card size (m): width, height. Grey wisp card size (m): width, height.
+@export_range(0.5, 4.0, 0.05) var tfx_steam_card_w_m: float = 1.6
+@export_range(0.5, 6.0, 0.05) var tfx_steam_card_h_m: float = 3.2
+@export_range(0.5, 4.0, 0.05) var tfx_wisp_card_w_m: float = 1.4
+@export_range(0.5, 6.0, 0.05) var tfx_wisp_card_h_m: float = 2.6
+## Opacity of the steam's light and dark tones, and of the wisps' tones.
+@export_range(0.0, 1.0, 0.01) var tfx_steam_alpha: float = 0.95
+@export_range(0.0, 1.0, 0.01) var tfx_wisp_alpha: float = 0.9
+## The burn barrel: radius and height (m), the flame card's width and height (m) and its brightness.
+@export_range(0.2, 0.6, 0.01) var tfx_barrel_radius_m: float = 0.34
+@export_range(0.5, 1.4, 0.01) var tfx_barrel_height_m: float = 0.95
+@export_range(0.2, 2.0, 0.05) var tfx_flame_card_w_m: float = 0.85
+@export_range(0.2, 2.0, 0.05) var tfx_flame_card_h_m: float = 1.1
+@export_range(0.0, 3.0, 0.05) var tfx_flame_energy: float = 1.3
+## Embers per barrel, their size (m), how high they climb (m) and how far they sway (m).
+@export_range(0, 40, 1) var tfx_embers_per_barrel: int = 14
+@export_range(0.01, 0.2, 0.005) var tfx_ember_size_m: float = 0.055
+@export_range(0.5, 6.0, 0.1) var tfx_ember_rise_m: float = 2.6
+@export_range(0.0, 1.5, 0.05) var tfx_ember_sway_m: float = 0.35
+## Embers' life in seconds, and the barrel's ground glow: width (m) and opacity.
+@export_range(0.5, 6.0, 0.1) var tfx_ember_life_s: float = 2.2
+@export_range(0.5, 6.0, 0.1) var tfx_pool_m: float = 4.2
+@export_range(0.0, 1.0, 0.01) var tfx_pool_alpha: float = 0.85
+## M7 F3: how soft the barrel pool's edge is (a share of its half-size), and the thinnest the steam's and flame's ink line may get,
+## in pixels (a far plume keeps its outline).
+@export_range(0.0, 0.6, 0.01) var tfx_pool_soft: float = 0.12
+@export_range(0.0, 6.0, 0.1) var tfx_line_min_px: float = 1.8
+## M7 G4: the grey wisp's ink line, as the plume's: the share of its edge that gets a line (1: all round) and the line's width (m).
+@export_range(0.0, 1.0, 0.01) var tfx_wisp_line_share: float = 0.9
+@export_range(0.005, 0.1, 0.005) var tfx_wisp_line_m: float = 0.02
+
+@export_group("Night street (T10)")
+## The trailer look profile's night street (NightLook, game/level/look/): live multipliers on what its data authors. Presentation
+## only; under the m6 profile none of it is built.
+## A multiplier on every lamp's and barrel's light energy.
+@export_range(0.0, 3.0, 0.05) var night_lamp_energy: float = 1.0
+## A multiplier on the painted ground pools' opacity.
+@export_range(0.0, 2.0, 0.05) var night_pool_opacity: float = 1.0
+## A multiplier on the halos' energy (the part of the picture that blooms).
+@export_range(0.0, 3.0, 0.05) var night_halo_energy: float = 1.0
+## M7 F3, G4: how soft the halos' ring edges are (0: hard painted bands; a hair at 0.15, a sixth of a ring at 1), and how far the ground
+## pools' and the wall glows' outer wash fades (a share of the card's half-size; their inner tones are always crisp).
+@export_range(0.0, 1.0, 0.01) var night_halo_soft: float = 0.15
+@export_range(0.0, 0.6, 0.01) var night_pool_soft: float = 0.12
+@export_range(0.0, 0.6, 0.01) var night_wall_soft: float = 0.0
+## M7 x-street: 9 m (was 20): the toon light adds its shade level to every surface in range, so a far lamp left a pale ghost disc on a wall with no lamp near it.
+## M7 D2: the lamps' and barrels' lights fade out from this distance to the camera (m; 0 = never) over the next `night_lamp_fade_len_m`
+## and are not drawn beyond: a light far down the street costs frame time on every surface its clusters touch and lights nothing you see.
+@export_range(0.0, 80.0, 1.0) var night_lamp_fade_m: float = 9.0
+@export_range(1.0, 40.0, 1.0) var night_lamp_fade_len_m: float = 4.0
+## A multiplier on the haze bands' and the mist's strength.
+@export_range(0.0, 3.0, 0.05) var night_haze_scale: float = 1.0
+## A multiplier on the contact shadows' opacity.
+@export_range(0.0, 2.0, 0.05) var night_contact_opacity: float = 1.0
+
+@export_group("Dusk roofs (M7)")
+## The trailer look profile's dusk on Mission 1's roofs (DuskLook, game/level/look/): live multipliers on what its data authors. Presentation
+## only; under the m6 profile none of it is built.
+## A multiplier on the cloud banks' sky cover (0: a clear sky).
+@export_range(0.0, 2.0, 0.05) var dusk_cloud_scale: float = 1.0
+## A multiplier on the low sun disc's radius (0: no disc).
+@export_range(0.0, 2.0, 0.05) var dusk_sun_disc_scale: float = 1.0
+## A multiplier on the far skyline plates' brightness.
+@export_range(0.0, 2.0, 0.05) var dusk_skyline_energy: float = 1.0
+## A multiplier on the lit windows' glow.
+@export_range(0.0, 3.0, 0.05) var dusk_window_energy: float = 1.0
+## A multiplier on the haze bands' strength on the roofs.
+@export_range(0.0, 3.0, 0.05) var dusk_haze_scale: float = 1.0
+## The roofs' practicals (DuskDeck: bulkhead lamps, skylights, the sign): a multiplier on their glow and halos, and on their painted pools'
+## opacity. Painted cards only; no real light.
+@export_range(0.0, 3.0, 0.05) var dusk_practical_energy: float = 1.0
+@export_range(0.0, 2.0, 0.05) var dusk_practical_pool_opacity: float = 1.0
+## A multiplier on the long shadow shapes laid on the roofs' deck (0: none).
+@export_range(0.0, 2.0, 0.05) var dusk_deck_shade_opacity: float = 1.0
+
+@export_group("Boss roof (M7)")
+## The boss roof under the trailer look profile (BossroofFx, game/fx/bossroof_fx.gd; the area's colours and cards are BossroofLook, game/level/look/bossroof_look.tres): the
+## fire wall, its flame cards and the drifting embers. Presentation only; under the m6 profile none of it is built.
+## How many drawings a second the fire, flames and embers are redrawn at (held on twos of the 60 Hz tick).
+@export_range(4.0, 30.0, 1.0) var bossroof_twos_hz: float = 12.0
+## A multiplier on the fire cloud's colours, and on its hot core (HDR: only the core blooms).
+@export_range(0.0, 3.0, 0.05) var bossroof_fire_energy: float = 1.0
+@export_range(0.0, 6.0, 0.1) var bossroof_core_energy: float = 2.0
+## How much of the wall's height the tallest flame tongue reaches.
+@export_range(0.1, 1.0, 0.01) var bossroof_fire_reach: float = 0.78
+## The street's flame cards at the foot of the wall: their energy.
+@export_range(0.0, 3.0, 0.05) var bossroof_flame_energy: float = 1.3
+## The dark line round the flames and the fire is never thinner than this many pixels.
+@export_range(0.0, 6.0, 0.1) var bossroof_line_px: float = 2.0
+## A multiplier on the long flat shadow shapes laid on the boss roof's deck (0: none).
+@export_range(0.0, 2.0, 0.05) var bossroof_shade_opacity: float = 1.0
+## The embers: how many drift over the roof (0: none), their size (m), how far they climb (m), how far they sway (m) and how long one lives (s).
+@export_range(0, 120, 1) var bossroof_embers: int = 64
+@export_range(0.02, 0.5, 0.01) var bossroof_ember_size_m: float = 0.32
+@export_range(2.0, 40.0, 0.5) var bossroof_ember_rise_m: float = 18.0
+@export_range(0.0, 6.0, 0.1) var bossroof_ember_sway_m: float = 2.0
+@export_range(1.0, 12.0, 0.1) var bossroof_ember_life_s: float = 6.0
+
+@export_group("Rooms (M7)")
+## The crowd room and the training room under the trailer look profile (game/level/look/room_night.tres, TrailerLook): the room's
+## sun takes the night look's key (its height and direction), one calm key light, instead of the dusk's; off, the room keeps
+## the sun direction of Tuning's Look > Toon (the default, which tests/test_look_profile.gd pins: "the sun's direction, energy and
+## blur stay Tuning's"; turn it on to light the rooms from the street's key).
+@export var rooms_key_follow_look: bool = false
+## A multiplier on the night look's key energy in the rooms (1: as authored).
+@export_range(0.0, 3.0, 0.05) var rooms_key_energy: float = 1.0
+
+@export_group("Look profile")
+## Which look the presentation draws (Milestone 7): 0 = m6 (Milestone 6's), 1 = trailer (the comic look, the default). F7 flips
+## it live. Each profile is a LookProfileData in game/fx/look_profiles/ (light overrides, grade LUT, whether bloom is
+## allowed, an ink width scale, the effect art folder, the HUD style); LookProfile hands them to the post pass,
+## the materials and the level's light. Presentation only: simulation never reads it.
+@export_range(0, 1, 1) var look_profile: int = 1
+
+@export_group("Painted look (M7)")
+## The trailer profile's surface language (Milestone 7, T11): the painted character material (toon_painted.gdshader, an
+## albedo paint map and an ink map on UV2), its hull (toon_outline_painted.gdshader) and the grain on the trim. Only the
+## painted materials and the trim under the trailer profile read these; the m6 look never does.
+@export_subgroup("Tones")
+## The light value above which a painted surface shows its flat paint; below it, the shadow tone (two tones, no mid band).
+@export_range(0.05, 0.95, 0.01) var look_paint_cut: float = 0.42
+## The shadow tone's brightness, a share of the paint.
+@export_range(0.1, 1.0, 0.01) var look_paint_shadow_level: float = 0.5
+## The hue the shadow tone is pulled toward when the area gives none (an area sets its own: ToonMaterials.set_area_look()).
+@export var look_paint_shadow_hue: Color = Color(0.24, 0.24, 0.55)
+## How far the shadow tone moves toward that hue, brightness kept.
+@export_range(0.0, 1.0, 0.01) var look_paint_shadow_hue_amount: float = 0.25
+## The most an area's tint may pull a figure's paint: caps the shadow hue's amount and the light's hue kept, so a figure keeps its local colour under any sky.
+@export_range(0.0, 1.0, 0.01) var look_paint_area_tint_max: float = 0.2
+## The terminator's edge width in pixels at 1080p, never narrower (a shadow map's stair-steps are inside it).
+@export_range(0.0, 12.0, 0.1) var look_paint_term_soft_px: float = 3.0
+## A directional light lights a painted surface at no less than this share of full, in its hue: a dim night moon never drops the paint to black.
+@export_range(0.0, 1.0, 0.01) var look_paint_dir_floor: float = 0.5
+## How much of a light's own colour a painted surface keeps (0 = the light only brightens it). A figure keeps its local colour under a blue moon or an orange lamp; only the shadow tone carries the area's hue.
+@export_range(0.0, 1.0, 0.01) var look_paint_light_tint: float = 0.1
+## A fully lit painted surface shows this share of its paint under a directional light (the trailer's mid tone is a little under the flat swatch; the shadow tone is a share of this).
+@export_range(0.2, 1.5, 0.01) var look_paint_lit_level: float = 0.72
+## A lamp's light term is multiplied by this before the cut (a point light's falloff keeps its term low). A lamp adds nothing in its own shadow band.
+@export_range(0.5, 6.0, 0.05) var look_paint_point_gain: float = 2.2
+## The camera-fixed fill's share of a full light (0 = none: a figure that faces away from the key is one shadow tone with its rim).
+@export_range(0.0, 1.5, 0.01) var look_paint_fill: float = 1.0
+@export_subgroup("Ink and grain")
+## The cut on the ink map's R above which a pixel is ink (an edge one pixel wide, so a line stays crisp).
+@export_range(0.05, 0.95, 0.01) var look_paint_line_cut: float = 0.3
+## How much of the ink colour the map's lines take.
+@export_range(0.0, 1.0, 0.01) var look_paint_line_strength: float = 1.0
+## The grain on a painted flat fill, a share of the value, and its cells per metre (object space, so it sticks to the moving body).
+@export_range(0.0, 0.3, 0.005) var look_paint_grain: float = 0.0
+@export_range(10.0, 400.0, 1.0) var look_paint_grain_cells: float = 140.0
+## The grain on the trim's flat fills (trailer profile only), a share of the value, and its cells per metre.
+@export_range(0.0, 0.3, 0.005) var look_paint_trim_grain: float = 0.05
+@export_range(10.0, 400.0, 1.0) var look_paint_trim_grain_cells: float = 90.0
+@export_subgroup("Rim")
+## The one-sided rim on the key light's side, in the area's warm colour (an area sets its own), its strength, its width in pixels at 1080p
+## (a hard line just inside the silhouette, the same on a thin limb and a fat one) and how far a surface must face the key to take it (0 = anywhere
+## on the key's half; nothing on the side that turns from the key).
+@export var look_paint_rim_color: Color = Color(1.0, 0.56, 0.22)
+@export_range(0.0, 2.0, 0.01) var look_paint_rim_strength: float = 0.9
+@export_range(0.5, 12.0, 0.1) var look_paint_rim_px: float = 2.5
+@export_range(0.0, 1.0, 0.01) var look_paint_rim_key: float = 0.15
+## The rim follows the section's key: an area whose rim colour is cold (its blue above its red: the boss roof's sky) while warm lamps light it (its fire) takes its
+## brightest lamp's colour instead (1 = on, 0 = the area's own colour, whatever it is).
+@export_range(0, 1, 1) var look_paint_rim_follow_lamps: int = 1
+## A large form near the lens (a forearm) takes a thinner rim: inside this many metres of the lens its width falls toward `look_paint_rim_near_gain` of itself, full at twice the distance (0 = off).
+@export_range(0.0, 3.0, 0.05) var look_paint_rim_near_m: float = 1.2
+@export_range(0.05, 1.0, 0.01) var look_paint_rim_near_gain: float = 0.12
+@export_subgroup("Hit flash")
+## The contact hit flash under the trailer profile: 1 = a hard-edged flat shape (a flat light tone out to `look_paint_flash_hard_share` of hit_flash_radius_m, then nothing),
+## 0 = m6's soft radial fall-off. `look_paint_flash_hard_alpha` is the flat tone's opacity: under 1 the face and its ink show through the flash.
+@export_range(0, 1, 1) var look_paint_flash_hard: int = 1
+@export_range(0.2, 1.0, 0.01) var look_paint_flash_hard_share: float = 0.7
+@export_range(0.1, 1.0, 0.01) var look_paint_flash_hard_alpha: float = 0.62
+@export_subgroup("Hull")
+## The painted hull's line, a multiplier on look_outline_px: near the lens it is this much heavier (at look_outline_near_m), back to 1 by
+## boost_to_m, then from thin_from_m out to look_outline_far_m thinning to far_gain.
+@export_range(1.0, 4.0, 0.05) var look_paint_hull_near_gain: float = 1.6
+@export_range(0.5, 20.0, 0.1) var look_paint_hull_boost_to_m: float = 3.0
+@export_range(0.5, 40.0, 0.5) var look_paint_hull_thin_from_m: float = 6.0
+@export_range(0.1, 1.0, 0.01) var look_paint_hull_far_gain: float = 0.55
+## The ink map's A is a line weight hint: 0 gives weight_min times the line, 1 weight_max times it. A is read at this mip level in the vertex stage.
+@export_range(0.05, 1.0, 0.01) var look_paint_hull_weight_min: float = 0.3
+@export_range(0.5, 3.0, 0.01) var look_paint_hull_weight_max: float = 1.5
+@export_range(0.0, 6.0, 0.1) var look_paint_hull_weight_lod: float = 3.0
+## Ink weighs under a form: the line is this much heavier where the surface faces down than where it faces up (0 = even).
+@export_range(0.0, 0.9, 0.01) var look_paint_hull_under_bias: float = 0.5
+@export_subgroup("Drawn line (G1)")
+## A painted surface takes this share of the key's shadow map (0 = none: the shadow map's self-shadows, ragged grey patches between the legs
+## and under the brim, never show; the paint carries the designed shadow shapes). 1 gives the real shadow back.
+@export_range(0.0, 1.0, 0.01) var look_paint_cast_shadow: float = 0.0
+## The beat of the drawn line's wobble, steps per second: 12 holds each shape for two frames of a 24 fps cadence.
+@export_range(1.0, 30.0, 1.0) var look_paint_wobble_hz: float = 12.0
+## The inner ink (the ink map's R): how far the cut swings with an object-space noise (the line swells and tapers), the noise's cells per
+## metre, how much heavier the line gets on the side away from the key, and the wobble of the line against the fill, in ink-map texels.
+@export_range(0.0, 0.3, 0.005) var look_paint_line_vary: float = 0.0
+@export_range(1.0, 60.0, 0.5) var look_paint_line_vary_cells: float = 9.0
+@export_range(0.0, 0.3, 0.005) var look_paint_line_shadow: float = 0.06
+@export_range(0.0, 6.0, 0.1) var look_paint_line_wobble_texels: float = 0.0
+## Where the inner ink faces the key it breaks: the share of cells that drop the line (0 = never) and the cells per metre.
+@export_range(0.0, 1.0, 0.01) var look_paint_line_gap: float = 0.0
+@export_range(2.0, 80.0, 0.5) var look_paint_line_gap_cells: float = 16.0
+## The hull: how far the width swings with an object-space noise (a share of it) and the noise's cells per metre; how much heavier it is on the
+## shadow side than the lit side (0 = even); the wobble in pixels (steps on the beat) and its cells per metre.
+@export_range(0.0, 0.9, 0.01) var look_paint_hull_vary: float = 0.0
+@export_range(1.0, 40.0, 0.5) var look_paint_hull_vary_cells: float = 6.0
+@export_range(0.0, 2.0, 0.01) var look_paint_hull_shadow: float = 0.7
+@export_range(0.0, 4.0, 0.05) var look_paint_hull_wobble_px: float = 0.0
+@export_range(1.0, 60.0, 0.5) var look_paint_hull_wobble_cells: float = 11.0
+## The hull breaks where it faces the key: the share of cells that drop the line and the cells per metre.
+@export_range(0.0, 1.0, 0.01) var look_paint_hull_gap: float = 0.0
+@export_range(2.0, 80.0, 0.5) var look_paint_hull_gap_cells: float = 14.0
+## The rim can be broken into patches by a noise: its cells per metre and the cut (a higher cut leaves fewer, smaller patches; 0 = no patches, one clean line, the default).
+@export_range(1.0, 30.0, 0.5) var look_paint_rim_patch_cells: float = 4.5
+@export_range(0.0, 1.0, 0.01) var look_paint_rim_patch_cut: float = 0.0
+## The rim's width cap on large dark forms (a vest, a black top; M7 r0): where the paint is darker than `look_paint_rim_dark_luma` (a share of white) the rim is
+## at most `look_paint_rim_dark_px` pixels wide at 1080p, so the key's warm line stays a line on a big dark form and not a band. 0 px = no cap.
+@export_range(0.0, 12.0, 0.1) var look_paint_rim_dark_px: float = 1.2
+@export_range(0.02, 0.6, 0.01) var look_paint_rim_dark_luma: float = 0.2
+@export_subgroup("Ground contact (C1)")
+## A figure's contact shadow under the trailer profile: 1 = one soft dark blob (no noise, no hard core), 0 = the drawn two-value shape with a broken edge (props keep that).
+@export_range(0.0, 1.0, 0.01) var look_paint_contact_soft: float = 1.0
+@export_subgroup("Damage marks (D1)")
+## The damage marks under the trailer profile (m6 keeps its soft tiles): bold, flat, hard-edged shapes at the M6 tiles' size and coverage (the owner must see
+## each hit land), on skin and the blood's splats on cloth, with an ink edge, drawn under the ink line so the face drawing stays readable.
+## `look_paint_bruise_density` is the tile's tiles per metre against vfx_damage_tile_m (1 = M6's size; higher = smaller shapes, fewer on a face),
+## `look_paint_bruise_cut` the tile alpha above which a shape is drawn (a hard edge, no translucent wash), `look_paint_bruise_keep` the share of shapes kept
+## (a noise gate over object-space cells of `look_paint_bruise_cells` per metre; 1 = all), `look_paint_mark_ink_px` the width of the ink edge in pixels at 1080p.
+@export_range(0.5, 8.0, 0.05) var look_paint_bruise_density: float = 1.0
+@export_range(0.05, 0.99, 0.01) var look_paint_bruise_cut: float = 0.5
+@export_range(0.0, 1.0, 0.01) var look_paint_bruise_keep: float = 1.0
+@export_range(1.0, 40.0, 0.5) var look_paint_bruise_cells: float = 7.0
+@export_range(0.0, 6.0, 0.1) var look_paint_mark_ink_px: float = 1.6
+## A bruise's colour: the skin paint darkened (`look_paint_bruise_darken`, a share of its value) and pulled toward a flat purple-maroon by `look_paint_bruise_hue_amount`,
+## luminance kept. Blood is a flat red.
+@export_range(0.1, 1.0, 0.01) var look_paint_bruise_darken: float = 0.5
+@export var look_paint_bruise_hue: Color = Color(0.36, 0.16, 0.27)
+@export_range(0.0, 1.0, 0.01) var look_paint_bruise_hue_amount: float = 0.85
+@export var look_paint_blood_color: Color = Color(0.70, 0.06, 0.09)
+@export_subgroup("Frame finish (G1)")
+## The trailer's frame finish, 1 = on, 0 = the plain edge pass and the full 3D resolution (the A/B). It reads no screen copy (that cost about 3 ms): the
+## 3D view renders at `look_finish_scale` of the window and is upscaled bilinearly (the trailer is soft, like video; the HUD stays sharp, and the
+## smaller frame is cheaper); the edge quad's lines wobble by `look_finish_wobble_px` pixels (cells of `look_finish_wobble_cell_px`) and break in places
+## (`look_finish_line_break`: the share of the line the coarse noise thins or drops); a paper grain of `look_finish_grain` (a share of the value,
+## cells of `look_finish_grain_px` pixels) lies over the frame. The wobble, the breaks and the grain are new on each beat (look_paint_wobble_hz: twos).
+@export_range(0, 1, 1) var look_finish_on: int = 1
+@export_range(0.5, 1.0, 0.01) var look_finish_scale: float = 1.0
+@export_range(0.0, 0.2, 0.002) var look_finish_grain: float = 0.0
+@export_range(1.0, 6.0, 0.5) var look_finish_grain_px: float = 2.0
+@export_range(0.0, 3.0, 0.05) var look_finish_wobble_px: float = 0.0
+@export_range(20.0, 400.0, 5.0) var look_finish_wobble_cell_px: float = 120.0
+@export_range(0.0, 1.0, 0.01) var look_finish_line_break: float = 0.0
+
+@export_group("Cut-ins (M7)")
+## The drawn cards (Milestone 7, Phase 3; game/ui/cut_in.gd): full-screen stills at the mission title, an enemy type's first
+## appearance, an arena's knockout and the mission's end. They show only under the trailer look profile (never under m6),
+## and only with this on; a card with no art assigned is skipped. While one is up the simulation holds (TimeController).
+@export var cutins_enabled: bool = true
+## How long the mission title card holds (s).
+@export_range(0.2, 5.0, 0.05) var cutin_title_hold_s: float = 1.5
+## How long an enemy's entrance card holds (s): the first time each type appears in the mission, and Ox at the boss intro.
+@export_range(0.2, 5.0, 0.05) var cutin_entrance_hold_s: float = 0.9
+## How long an arena's knockout panel holds (s).
+@export_range(0.1, 3.0, 0.05) var cutin_ko_hold_s: float = 0.5
+## The mission end card waits for a button; it takes none for this long (s), so a mashed attack cannot dismiss it unseen.
+@export_range(0.0, 3.0, 0.05) var cutin_end_lock_s: float = 0.5
+## The fade in and out of a card (s); 0 cuts.
+@export_range(0.0, 0.5, 0.01) var cutin_fade_s: float = 0.1
+## The lettering's size on a card, a multiplier on the HUD's comic lettering (mission name, enemy name).
+@export_range(0.5, 2.0, 0.05) var cutin_lettering_size: float = 1.0
+## A card's caption box: the big and the small line (px at 1920 x 1080, before the lettering size), the padding around them (px), the shear, the
+## ink border and the drop shadow (px). The box sits bottom-left, this share of the frame in from the left and up from the bottom, clear of the subject.
+@export_range(24, 200, 1) var cutin_label_px: int = 64
+@export_range(12, 120, 1) var cutin_sub_px: int = 30
+@export_range(0.0, 100.0, 1.0) var cutin_pad_x_px: float = 30.0
+@export_range(0.0, 100.0, 1.0) var cutin_pad_y_px: float = 16.0
+@export_range(0.0, 0.4, 0.01) var cutin_slant: float = 0.14
+@export_range(0.0, 20.0, 0.5) var cutin_border_px: float = 5.0
+@export_range(0.0, 24.0, 0.5) var cutin_shadow_px: float = 7.0
+@export_range(0.0, 0.3, 0.005) var cutin_margin_x: float = 0.035
+@export_range(0.0, 0.3, 0.005) var cutin_margin_y: float = 0.06
+## At most this many cards wait behind the one showing; further ones (never the end card) are dropped.
+@export_range(0, 10, 1) var cutin_max_waiting: int = 3
+## The first step of game time a card is given after it goes up counts at most this long (s): the frame that first draws it also carries
+## the level's load and the shader compiles, which must not eat its hold. 0 turns the cap off.
+@export_range(0.0, 0.2, 0.005) var cutin_first_step_cap_s: float = 0.033
+## A restart (or any scene load) shows the mission title and the enemy entrances again; off, each shows once per run of the game.
+@export var cutin_replay_on_restart: bool = false
 
 @export_group("Audio")
 @export_subgroup("Mix")

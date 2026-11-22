@@ -18,6 +18,8 @@ extends MeshInstance3D
 
 func _ready() -> void:
 	ensure_mesh()
+	if not Tuning.changed.is_connected(_on_look_profile_changed):
+		Tuning.changed.connect(_on_look_profile_changed)
 
 
 ## Builds the mesh if it is not built yet. A block that yields to this piece (InsetBlock) asks for the mesh in its own `_ready`,
@@ -31,7 +33,13 @@ func _rebuild() -> void:
 	if not is_inside_tree():
 		return
 	var show_it := RoomKit.kit_art(kind)
-	mesh = KitMesh.build(kind, size) if show_it else null
+	mesh = KitMesh.build(kind, size, TrimSheet.variant_for(position)) if show_it else null
 	visible = show_it
 	if show_it and not KitMesh.KINDS.has(kind):
 		push_warning("KitPiece '%s': no kit kind '%s'" % [name, kind])
+
+
+## A flip of the look profile: the piece's mesh is the new profile's (the trailer sheet's UVs and this piece's variant).
+func _on_look_profile_changed(property: StringName) -> void:
+	if property == &"" or property == &"look_profile":
+		_rebuild()

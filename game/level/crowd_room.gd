@@ -136,6 +136,8 @@ func _ready() -> void:
 		spawner.set_waves_enabled(false)
 	if with_presentation:
 		RoomKit.build_presentation(self)
+		# The trailer profile's night look (the same layer a level has; nothing at all under m6).
+		add_child(TrailerLook.new())
 
 
 ## The AI enemies in the room (members of "ai_enemy"), dead and alive.
@@ -268,10 +270,12 @@ func _add_windows(x0: float, x1: float, z_face: float, height: float, material: 
 					Vector3(start + float(c) * window_pitch_m, y, z_face + window_proud_m - window_depth_m * 0.5),
 					Vector3(window_size.x, window_size.y, window_depth_m), material, null, &"window")
 			window.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			# The trailer look's lit-window cards find the windows by this (NightStreet).
+			window.set_meta(&"kit_window", Vector3(window_size.x, window_size.y, window_depth_m))
 		y += window_row_m
 
 
-## The end walls with an alley through each: floor, dark side walls and a dark blind end.
+## The end walls with an alley through each: floor, side walls and a blind end (M7 x-street: the wall kit like the walls beside them, not the glassy dark slab).
 func _build_ends(wall: Material, dark: Material) -> void:
 	var half_gap := alley_width * 0.5
 	var z_north := -(lane_half_width + front_depth)
@@ -294,10 +298,10 @@ func _build_ends(wall: Material, dark: Material) -> void:
 		for sign_z: float in [-1.0, 1.0]:
 			RoomKit.add_box(geometry,
 					Vector3((x_a + x_b) * 0.5, base + height * 0.5, sign_z * (half_gap + alley_wall_thickness * 0.5)),
-					Vector3(absf(x_b - x_a), height, alley_wall_thickness), dark, null, &"slab_dark")
+					Vector3(absf(x_b - x_a), height, alley_wall_thickness), dark, null, &"wall")
 		RoomKit.add_box(geometry,
 				Vector3(sign_x * (lane_half_length + alley_length + alley_wall_thickness * 0.5), base + height * 0.5, 0.0),
-				Vector3(alley_wall_thickness, height, alley_width + alley_wall_thickness * 2.0), dark, null, &"slab_dark")
+				Vector3(alley_wall_thickness, height, alley_width + alley_wall_thickness * 2.0), dark, null, &"wall")
 
 
 ## The low curb with the side alley, an invisible barrier above it (a jump would otherwise
@@ -375,5 +379,7 @@ func _build_backdrop(wall: Material, accent: Material) -> void:
 	for i in skyline.size():
 		var block := skyline[i]
 		var height := skyline_heights[i % skyline_heights.size()]
-		RoomKit.add_visual_box(geometry, Vector3(block.x, height * 0.5 - 0.05, block.y),
+		var face := RoomKit.add_visual_box(geometry, Vector3(block.x, height * 0.5 - 0.05, block.y),
 				Vector3(block.z, height, skyline_depth), wall if i % 2 == 0 else accent, null, &"skyline")
+		# The trailer look's facade wash finds the blocks by this (NightStreet).
+		face.set_meta(&"kit_skyline", Vector3(block.z, height, skyline_depth))

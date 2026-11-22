@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-140 -150 280 300">
+<!-- The trailer Kicker (M7 e-kicker, bolder at x-chars): the masked face over the head's front sheet (centre -0.003 / 1.675 m). Millimetres, x to the viewer's right, y down.
+     The visible face is the strip between the cap's brim and the mask's top edge (y 6 to 34), shaded as one flat shape: heavy slanted brows, big eye whites with a
+     square pupil and a catchlight, the mask's folds from the nose, bold enough for 2 to 3 m. White shapes are painted (data-paint), lines go into the ink,
+     data-channel="catch" into the ink map's A. See tools/pipeline/trailer_features.py. -->
+<g data-view="front" data-origin="-0.003 1.675" data-px="4">
+	<g stroke-width="0.3" opacity="0.95" data-wobble="0.0">
+		<path id="eye_w_l" d="M -62 25 Q -42 14 -16 22 L -19 35 Q -40 40 -58 34 Z" fill="ink" fill-opacity="1.0" data-paint="#f0e9d2"/>
+		<path id="eye_w_r" d="M 16 22 Q 42 14 62 25 L 58 34 Q 40 40 19 35 Z" fill="ink" fill-opacity="1.0" data-paint="#f0e9d2"/>
+	</g>
+	<g stroke-width="0.6" opacity="1.0" data-wobble="0.0" fill="ink" fill-opacity="1.0">
+		<path id="pupil_l" d="M -42 21 L -30 22 L -30 35 L -42 35 Z"/>
+		<path id="pupil_r" d="M 30 22 L 42 21 L 42 35 L 30 35 Z"/>
+	</g>
+	<g stroke-width="0.3" opacity="1.0" data-wobble="0.0" data-channel="catch" fill="ink">
+		<path id="glint_l" d="M -39 24 L -34 24 L -34 29 L -39 29 Z"/>
+		<path id="glint_r" d="M 33 24 L 38 24 L 38 29 L 33 29 Z"/>
+	</g>
+	<g stroke-width="7.4" opacity="1.0" data-taper="0.05,0.3" data-wobble="0.2">
+		<path id="brow_l" d="M -72 9 C -54 11 -34 16 -12 26"/>
+		<path id="brow_r" d="M 72 9 C 54 11 34 16 12 26"/>
+	</g>
+	<g stroke-width="3.2" opacity="0.95" data-taper="0.1,0.2" data-wobble="0.2">
+		<path id="lid_l" d="M -62 25 Q -42 14 -16 22"/>
+		<path id="lid_r" d="M 16 22 Q 42 14 62 25"/>
+		<path id="under_l" d="M -56 37 Q -40 42 -22 37"/>
+		<path id="under_r" d="M 22 37 Q 40 42 56 37"/>
+	</g>
+	<g stroke-width="4.4" opacity="0.95" data-taper="0.15,0.35" data-wobble="0.4">
+		<path id="mask_c1" d="M -8 42 C -22 60 -44 76 -70 92"/>
+		<path id="mask_c2" d="M 8 42 C 24 60 46 76 72 92"/>
+		<path id="mask_c3" d="M -4 52 C -10 80 -14 104 -12 130"/>
+		<path id="mask_c4" d="M -40 72 C -52 84 -62 96 -70 112"/>
+		<path id="mask_c5" d="M 40 72 C 52 84 62 96 70 112"/>
+		<path id="mask_c6" d="M -34 118 C -10 128 12 128 34 118"/>
+	</g>
+</g>
+</svg>

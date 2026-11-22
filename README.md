@@ -405,7 +405,7 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
 - **The level walk's frame time is +15.3% over the pre-art level, 0.3 points over the plan's 15% line.** The perf fix stopped at the best result with no visible change. The levers left (occlusion culling, plain boxes for the walls, no shadows on windows or the skyline) would change what you see, or measured at 1% or less; `docs/milestones/M6-calls/fix-final-perf.md` costs each.
 
 **Automated checks:**
-- `tools/run_tests.sh` runs about 2076 tests headless in about 415 s. Among them:
+- `tools/run_tests.sh` runs 2309 tests headless in about 670 s on the shared machine (M6 ended at 2076 tests and 415 s). Among them:
   - an end-to-end suite where a scripted player performs every combo in the real test room;
   - each milestone's done-when test (`tests/test_m3_done_when.gd`; `tests/test_m4_done_when.gd`, now run for every character in the art roster; `tests/test_m5_done_when.gd`, which plays the whole level arena by arena; `tests/test_m6_no_placeholders.gd`);
   - the level's own tests (`tests/test_m5_street.gd`, `tests/test_m5_roofs.gd`, `tests/test_level_kit.gd`, `tests/test_level_bot.gd`).
@@ -416,6 +416,21 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
   - Record any bot with `tools/capture_bot.sh`, or several acts at once into one folder with `tools/record_acts.sh <out dir> "<slug>|<act title>" ...` (`BOT_SCENE` picks the bot, `CAPTURE_ARGS` passes its arguments).
   - The bot's held-back pilot never jumps, so the boss's unblockable Ground Pound always lands. Its A7 damage and time are higher than a human's.
 - `tools/check_m3_log.py <bot.log>` reads a crowd bot log and exits 1 if a warning corner is missing or wrong, a token count goes over the cap, a hard metric fails or the log has a script error. `tools/capture_bot.sh` writes `bot.log` next to the recording.
+
+**Where M7 departs from the spec and the look bible (approved by Game-boy, Slack DM 2026-11-11 08:52 CST):**
+- **The milestones are reordered.** Milestone 7 is now "the trailer's look, playable" ([docs/milestones/M7-trailer-look-plan.md](docs/milestones/M7-trailer-look-plan.md)). SPEC §12's M7 (the performance target, bugs, the Windows export) becomes Milestone 8. His words: "Ok to reorder the milestones and merge the current PR as milestone 6's completion."
+- **Character designs follow the trailer:** the Punk's grey cap and dark puffy vest, the player's grey sleeves and dark gloves, the Kicker's flat cap and vest. **Ox keeps his M6 colouring,** not the trailer's all-grey: "one thing I didn't like in the trailer was that Ox had NO color. I'd like to try and keep his coloring from the previous milestone".
+- **Two look-bible limits are lifted for the `trailer` look profile only:** the environment saturation cap of 0.30, and bloom on VFX only. ("OK")
+- **The bar:** a game still should be hard to tell from a trailer still; in motion the game is steadier than the trailer. ("Yes")
+- **Spend approved:** Gemini up to $35; Tripo 55 credits for the slice and a top-up if the new-model route wins. He asked for a DM if either account needs more credit.
+
+**M7, Phase 3: the bar is relaxed to comic-book 3D (approved by Game-boy in chat, 2026-11-13):** after two painted-texture rounds and three route spikes, he asked "If we relaxed the exact art style that you've been going for: what is the best combination of high-quality art and feasibility for this project", asked to see the plan, and answered "Approve, start". The target is [docs/milestones/M7-comic-3d.md](docs/milestones/M7-comic-3d.md).
+- **The bar above is replaced:** a clean cel-shaded 3D brawler with the trailer's night mood, judged by his eye on a reel and a play session. The blind "drawn or 3D" judge is retired. Characters stay 3D; Ox keeps his M6 colouring.
+- **Drawn cut-in cards are added** (not in the spec): a mission title card, a card at each enemy type's first entrance and Ox's name card, a knockout panel when an arena is cleared, and a mission end card. They hold the game briefly through `TimeController`, are skippable, and are off under the M6 look.
+- **The chain-link fence becomes a drawn bar-and-board fence** under the `trailer` look only; collision is unchanged.
+- **The new look is the default** (done, T53): the game starts with `look_profile` = 1 (the comic look, cut-in cards on); F7 shows the M6 look and back, and `--tune=look_profile=0` starts in M6.
+- **Spend:** Gemini at most $24 more, inside the $35 already approved; no Tripo.
+- **Open at Gate 4 (not yet approved): the frame-time gate (+10% over M6).** Met by CPU work on the street (+2%) and the roofs (+3%); not met on the boss roof by CPU (+12%) nor by wall time (wall frame +15% street, +20% roofs, +25% boss roof, with 2 to 4% of frames missing a refresh against 0.2 to 0.4% under M6), measured on a machine whose GPU was 93 to 99% busy with other processes. Game-boy rules on it at Gate 4.
 
 ## Repo layout
 

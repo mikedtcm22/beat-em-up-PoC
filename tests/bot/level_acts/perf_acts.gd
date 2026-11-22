@@ -5,6 +5,9 @@ extends RefCounted
 ##                       (arenas 0 to 5 of Mission 1), walking the route between them; the seeded
 ##                       waves and the route are the same on every checkout. It is the "before" of
 ##                       M6's environment art (the first KIT commit) and its "after".
+##   "Perf: roofs walk"  (M7 T52) the same walk over the roofs' arenas only (A4-A6), so the roofs' frame time
+##                       can be read on its own.
+##   "Perf: boss roof"   (M7 T52) god mode, the autopilot fights the boss roof's arena (Ox) from its start.
 ##   "Perf: counters"    (M6 fix-final-perf) the player is put at a row of fixed poses through the street,
 ##                       the roofs and the boss roof (the arena tour's), the AI frozen, each held; the
 ##                       renderer's counters (draw calls, objects, primitives, visible and shadow passes)
@@ -16,6 +19,8 @@ extends RefCounted
 
 ## The last arena of the walk (0-based): A6, the roofs' top roof; the boss is not in it.
 const LAST_ARENA := 5
+## The roofs' first arena (A4, the terrace).
+const FIRST_ROOFS_ARENA := 3
 
 
 ## Physics ticks a pose is held before it is counted (the light's blend and the first draws settle), and
@@ -48,6 +53,8 @@ static func acts(bot: Node) -> Array[Dictionary]:
 		{title = "Perf: level walk", cam = &"first_person", fn = func() -> void: await _walk(bot)},
 		{title = "Perf: counters", cam = &"first_person", fn = func() -> void: await _counters(bot)},
 		{title = "Perf: inventory", cam = &"first_person", fn = func() -> void: await _inventory(bot)},
+		{title = "Perf: roofs walk", cam = &"first_person", fn = func() -> void: await _walk(bot, FIRST_ROOFS_ARENA, LAST_ARENA)},
+		{title = "Perf: boss roof", cam = &"first_person", fn = func() -> void: await _walk(bot, LAST_ARENA + 1, -1)},
 	]
 
 
@@ -201,9 +208,10 @@ static func _counters(bot: Node) -> void:
 	bot.log_line(total_line)
 
 
-static func _walk(bot: Node) -> void:
+## God mode, the autopilot plays arenas `from` to `to` (-1: the last; default the level walk's, 0 to LAST_ARENA).
+static func _walk(bot: Node, from: int = 0, to: int = LAST_ARENA) -> void:
 	bot.god(true)
 	await bot._look_to(0.0, 10)
 	var arenas: Array[Arena] = bot.level.arenas()
-	var last := mini(LAST_ARENA, arenas.size() - 1)
-	await bot.run_level(0, last, false, false)
+	var last := mini(to, arenas.size() - 1) if to >= 0 else arenas.size() - 1
+	await bot.run_level(mini(from, last), last, false, false)

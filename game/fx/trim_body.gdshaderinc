@@ -29,9 +29,24 @@ uniform float scissor_cut : hint_range(0.05, 0.95) = 0.35;
 // The edge pass's tag, written as ROUGHNESS: 1 on the world, so its lines draw on a module.
 uniform float edge_tag : hint_range(0.0, 1.0) = 1.0;
 
+// The trailer profile's grain on the flat fills (Milestone 7, T11; paint_grain.gdshaderinc): x a share of the value (0 under the m6
+// profile: none), y the cells per metre. A GLOBAL uniform (project.godot [shader_globals]; ToonMaterials.apply_look() sets it), so
+// no trim material's own uniforms differ between the profiles. Under the ink: a drawn seam or crack stays clean.
+global uniform vec2 paint_trim_grain;
+
 // A debug view of the sampling (FB-GROUND): 0 the picture; 1 the strip index; 2 the mip level the footprint wants (log2 of the
 // texels a pixel covers, 0 to 12 as black to white); 3 the ink mask; 4 the sheet's alpha as it is sampled.
 uniform int debug_view : hint_range(0, 4) = 0;
+
+#ifdef TRIM_SCISSOR
+// The trailer profile's fence (Milestone 7, G3): with fence_on the chain-link faces draw this painted alpha card (a simple drawn fence: posts, two rails,
+// uneven boards with gaps and a few broken ones) instead of the sheet's lattice. The card covers fence_card.x by
+// fence_card.y metres in the face's own metres (u along the face, v up it from its bottom, the card's top on the face's top: KitMesh
+// aligns it), repeating along u. 0 under the m6 profile: the lattice is drawn as before.
+uniform sampler2D fence_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform float fence_on = 0.0;
+uniform vec2 fence_card = vec2(8.0, 4.0);
+#endif
 
 varying vec2 face_m;
 varying vec2 world_m;
@@ -92,9 +107,21 @@ void fragment() {
 		c = textureGrad(trim_tex, uv, gx * keep, gy * keep);
 	}
 	vec3 color = c.rgb;
+	if (paint_trim_grain.x > 0.0) {
+		vec2 gp = (ground ? world_m : face_m) * paint_trim_grain.y;
+		float cell = length(fwidth(gp));
+		float g = paint_grain_noise(vec3(gp, 0.0));
+		color *= 1.0 + (g - 0.5) * 2.0 * paint_trim_grain.x * (1.0 - smoothstep(0.35, 0.9, cell));
+	}
 #ifdef TRIM_SCISSOR
 	if (row.w > 0.5 && row.w < 1.5) {
-		ALPHA = c.a;
+		if (fence_on > 0.5) {
+			vec4 f = texture(fence_tex, vec2(face_m.x / fence_card.x, 1.0 - face_m.y / fence_card.y));
+			color = f.rgb;
+			ALPHA = f.a;
+		} else {
+			ALPHA = c.a;
+		}
 		ALPHA_SCISSOR_THRESHOLD = scissor_cut;
 	} else {
 		color = mix(color, ink, ink_mask(c.a, texels, fade_texels, ground));

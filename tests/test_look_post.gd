@@ -4,6 +4,7 @@ extends GutTest
 ## the rooms and the paints (A13: red is reserved). The pixels themselves (the lines, the mask)
 ## are windowed: tests/bot/look_probe.gd and tests/bot/acts/look_post_acts.gd.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const GenLut := preload("res://tools/gen_lut.gd")
 const LookProbe := preload("res://tests/bot/look_probe.gd")
 const LookPostActs := preload("res://tests/bot/acts/look_post_acts.gd")
@@ -38,6 +39,7 @@ class QuietBot extends "res://tests/bot/crowd_bot.gd":
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	Tuning.set_value(&"waves_enabled", false)
 	TimeController.clear()
 	GameInput.menu_open = false
@@ -857,3 +859,70 @@ func test_e2_runs_headless_and_marks_the_mask_states() -> void:
 		if child is MeshInstance3D and (child as MeshInstance3D).mesh is SphereMesh and not child.is_queued_for_deletion():
 			leftover += 1
 	assert_eq(leftover, 0, "the scratch spheres are gone")
+
+
+# --- M7 G1: the trailer's frame finish lives in the one pass ---
+
+func test_the_finish_is_a_variant_of_the_same_pass_and_the_m6_pass_keeps_no_screen_read() -> void:
+	var plain := load(EDGE_SHADER_PATH) as Shader
+	var finish := LookPost.finish_shader()
+	assert_true(finish.code.begins_with(LookPost.FINISH_DEFINE), "the source with the define on top")
+	assert_true(finish.code.ends_with(plain.code))
+	assert_same(LookPost.finish_shader(), finish, "made once")
+	assert_not_same(LookPost.finish_shader(true), finish, "and one with the depth-only fallback")
+	assert_true(LookPost.finish_shader(true).code.contains(LookPost.DEPTH_ONLY_DEFINE))
+	var include_code := FileAccess.get_file_as_string("res://game/fx/edge_finish.gdshaderinc")
+	assert_false(include_code.contains("hint_screen_texture"), "the finish reads no screen copy either (it cost about 3 ms and erases the haze and the flash)")
+	assert_false(plain.code.contains("hint_screen_texture"), "the m6 pass never reads the screen")
+
+
+func test_the_finish_is_on_under_the_trailer_profile_only_and_follows_its_switch() -> void:
+	var post := _post_in_room()
+	assert_eq(post.edge_material().shader, load(EDGE_SHADER_PATH), "m6: the plain pass")
+	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
+	assert_same(post.edge_material().shader, LookPost.finish_shader(), "trailer: the finish variant")
+	var data := Tuning.data
+	var material := post.edge_material()
+	assert_eq(material.get_shader_parameter(&"line_break"), data.look_finish_line_break)
+	assert_eq(material.get_shader_parameter(&"wobble_px"), data.look_finish_wobble_px)
+	assert_eq(material.get_shader_parameter(&"grain"), data.look_finish_grain)
+	assert_eq(material.get_shader_parameter(&"beat_hz"), data.look_paint_wobble_hz, "the grain and the wobble hold on the line's beat")
+	Tuning.set_value(&"look_finish_on", 0)
+	assert_eq(material.shader, load(EDGE_SHADER_PATH), "switched off: the plain pass (the A/B for its cost)")
+	Tuning.set_value(&"look_finish_on", 1)
+	Tuning.set_value(&"look_edge_depth_only", true)
+	assert_same(material.shader, LookPost.finish_shader(true), "the cheap fallback keeps the finish")
+	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
+	Tuning.set_value(&"look_edge_depth_only", false)
+	assert_eq(material.shader, load(EDGE_SHADER_PATH), "back to m6 exactly")
+
+
+func test_the_trailer_pass_has_the_same_render_priority_and_one_quad() -> void:
+	var post := _post_in_room()
+	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
+	assert_eq(post.edge_material().render_priority, -127)
+	var quads := 0
+	for child: Node in post.get_children():
+		if child is MeshInstance3D:
+			quads += 1
+	assert_eq(quads, 1, "no second pass")
+
+
+func test_the_trailer_softens_with_the_3d_scale_and_m6_gets_the_viewport_back() -> void:
+	var viewport := get_viewport()
+	var before_scale := viewport.scaling_3d_scale
+	var before_mode := viewport.scaling_3d_mode
+	var post := _post_in_room()
+	assert_eq(viewport.scaling_3d_scale, before_scale, "m6: untouched")
+	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
+	assert_almost_eq(viewport.scaling_3d_scale, Tuning.data.look_finish_scale, 0.001, "trailer: rendered a little under the window, upscaled bilinear")
+	assert_eq(viewport.scaling_3d_mode, Viewport.SCALING_3D_MODE_BILINEAR)
+	Tuning.set_value(&"look_finish_on", 0)
+	assert_almost_eq(viewport.scaling_3d_scale, before_scale, 0.001, "switched off: full resolution")
+	Tuning.set_value(&"look_finish_on", 1)
+	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
+	assert_almost_eq(viewport.scaling_3d_scale, before_scale, 0.001, "back to m6: as it was")
+	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
+	post.free()
+	assert_almost_eq(viewport.scaling_3d_scale, before_scale, 0.001, "leaving the room gives the viewport back")
+	assert_eq(viewport.scaling_3d_mode, before_mode)

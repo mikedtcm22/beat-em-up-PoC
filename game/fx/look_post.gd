@@ -26,6 +26,12 @@ const EDGE_SHADER := preload("res://game/fx/edge_pass.gdshader")
 const LUT_PATH := "res://assets/export/look/grade_lut.png"
 ## Prepended to the edge shader's source for the depth-only fallback.
 const DEPTH_ONLY_DEFINE := "#define EDGE_DEPTH_ONLY\n"
+## Prepended for the trailer profile's finish (M7 G1): the pass also softens, wobbles and grains the frame (edge_pass.gdshader).
+const FINISH_DEFINE := "#define EDGE_FINISH\n"
+## Prepended after FINISH_DEFINE while the finish has nothing to do (grain, wobble and line break all zero, the trailer's default): the pass
+## drops the finish code and its uniforms altogether, and skips the pixels that have no line (M7 D2: the finish's branches cost 0.5 ms or more at
+## full scale even at zero).
+const QUIET_DEFINE := "#define EDGE_FINISH_QUIET\n"
 ## Just above the contact flash (Material.RENDER_PRIORITY_MIN), below every comic sprite.
 const EDGE_RENDER_PRIORITY := Material.RENDER_PRIORITY_MIN + 1
 ## The quad is never culled: it is a screen, not a thing in the world.
@@ -38,6 +44,7 @@ const BYTE_MAX := 255.0
 enum AaMode { MSAA_4X, FXAA, OFF }
 
 static var _depth_only_shader: Shader
+static var _finish_shaders: Dictionary[int, Shader] = {}
 
 var _quad: MeshInstance3D
 var _material: ShaderMaterial
@@ -46,9 +53,15 @@ var _environment: Environment
 var _graded: PackedByteArray = PackedByteArray()
 var _identity: PackedByteArray = PackedByteArray()
 var _lut_size: int = 0
+## The path the LUT bytes above were read from (the running look profile's).
+var _lut_path: String = ""
 var _lut_texture: ImageTexture3D
 var _lut_strength: float = -1.0
 var _viewport: Viewport
+var _sun: DirectionalLight3D
+var _scale_before: float = -1.0
+var _mode_before: int = Viewport.SCALING_3D_MODE_BILINEAR
+var _key_published: Vector3 = Vector3.ZERO
 var _aa_before: Dictionary = {}
 var _aa_applied: Dictionary = {}
 
@@ -67,7 +80,30 @@ func _ready() -> void:
 	Tuning.changed.connect(_on_tuning_changed)
 
 
+func _process(_delta: float) -> void:
+	_publish_key_dir()
+
+
+## The key's direction (towards the light) for the painted hull and ink (the global uniform `paint_key_dir`): the room's Sun, read every frame
+## under the trailer profile (a level section's light turns it as it blends).
+func _publish_key_dir() -> void:
+	if LookProfile.current() != LookProfile.Id.TRAILER:
+		return
+	if _sun == null or not is_instance_valid(_sun):
+		var room := get_parent()
+		_sun = room.get_node_or_null("Sun") as DirectionalLight3D if room != null else null
+		if _sun == null:
+			return
+	var to_light := _sun.global_transform.basis.z.normalized()
+	if not to_light.is_equal_approx(_key_published):
+		_key_published = to_light
+		RenderingServer.global_shader_parameter_set(&"paint_key_dir", to_light)
+
+
 func _exit_tree() -> void:
+	if _viewport != null and is_instance_valid(_viewport) and _scale_before > 0.0:
+		_viewport.scaling_3d_scale = _scale_before
+		_viewport.scaling_3d_mode = _mode_before
 	if Tuning.changed.is_connected(_on_tuning_changed):
 		Tuning.changed.disconnect(_on_tuning_changed)
 	# Give the viewport its mode back, unless something else has set one since.
@@ -138,12 +174,36 @@ static func depth_only_shader() -> Shader:
 	return _depth_only_shader
 
 
+## The edge shader with the finish on (M7 G1), with or without the depth-only fallback. With `quiet` (by default: whenever the tuned grain, wobble and
+## line break are all zero) it is the variant that carries none of the finish's code (see QUIET_DEFINE).
+static func finish_shader(depth_only: bool = false, quiet: bool = finish_is_quiet()) -> Shader:
+	var key := (1 if depth_only else 0) + (2 if quiet else 0)
+	if not _finish_shaders.has(key):
+		var shader := Shader.new()
+		shader.code = FINISH_DEFINE + (QUIET_DEFINE if quiet else "") + (DEPTH_ONLY_DEFINE if depth_only else "") + EDGE_SHADER.code
+		_finish_shaders[key] = shader
+	return _finish_shaders[key]
+
+
+## Whether the tuned finish draws nothing of its own: no grain, no wobble, no line break.
+static func finish_is_quiet() -> bool:
+	var t := Tuning.data
+	return t.look_finish_grain <= 0.0 and t.look_finish_wobble_px <= 0.0 and t.look_finish_line_break <= 0.0
+
+
+## Whether the frame's finish is on: the trailer profile only.
+static func finish_on() -> bool:
+	return LookProfile.current() == LookProfile.Id.TRAILER and Tuning.data.look_finish_on == 1
+
+
 ## Push every Look > Edges, Grade and AA tunable to the quad, the Environment and the viewport.
 func apply() -> void:
 	_apply_sun()
+	_apply_room_light()
 	_apply_edges()
 	_apply_grade()
 	_apply_aa()
+	_apply_finish_scale()
 
 
 func _build_quad() -> void:
@@ -181,14 +241,32 @@ func _apply_sun() -> void:
 	RoomKit.apply_sun(sun)
 
 
+## A room without a LevelRoot's light blend (the crowd street, the training room) takes the running
+## profile's sky, fog and sun colour: RoomKit's defaults with the profile's overrides on them, written
+## only where they differ. A LevelRoot does this itself (its blend carries the profile; level_root.gd).
+func _apply_room_light() -> void:
+	var room := get_parent()
+	if room == null or room.has_method(&"current_light"):
+		return
+	RoomKit.apply_room_light(room, LookProfile.resolve_light(RoomKit.default_room_light()))
+
+
 func _apply_edges() -> void:
 	var t := Tuning.data
 	_quad.visible = t.look_edges_enabled
-	var wanted: Shader = depth_only_shader() if t.look_edge_depth_only else EDGE_SHADER
+	var finish := finish_on()
+	var wanted: Shader = finish_shader(t.look_edge_depth_only) if finish else (depth_only_shader() if t.look_edge_depth_only else EDGE_SHADER)
 	if _material.shader != wanted:
 		_material.shader = wanted
+	if finish:
+		_material.set_shader_parameter(&"line_break", t.look_finish_line_break)
+		_material.set_shader_parameter(&"grain", t.look_finish_grain)
+		_material.set_shader_parameter(&"grain_px", t.look_finish_grain_px)
+		_material.set_shader_parameter(&"wobble_px", t.look_finish_wobble_px)
+		_material.set_shader_parameter(&"wobble_cell_px", t.look_finish_wobble_cell_px)
+		_material.set_shader_parameter(&"beat_hz", t.look_paint_wobble_hz)
 	_material.set_shader_parameter(&"ink", HudStyle.INK)
-	_material.set_shader_parameter(&"width_px", t.look_edge_px)
+	_material.set_shader_parameter(&"width_px", t.look_edge_px * LookProfile.ink_width_scale())
 	_material.set_shader_parameter(&"depth_threshold", t.look_edge_depth_threshold)
 	_material.set_shader_parameter(&"normal_threshold", t.look_edge_normal_threshold)
 	_material.set_shader_parameter(&"fade_start_m", t.look_edge_fade_start_m)
@@ -203,6 +281,13 @@ func _apply_grade() -> void:
 		return
 	var t := Tuning.data
 	_environment.tonemap_mode = tonemap_mode(t.look_tonemap)
+	var bloom := LookProfile.bloom_allowed()
+	if _environment.glow_enabled != bloom:
+		_environment.glow_enabled = bloom
+	# The profile's LUT: another profile's file is read and the texture rebuilt from it.
+	if LookProfile.grade_lut_path() != _lut_path:
+		_read_lut()
+		_lut_texture = null
 	if not t.look_grade_enabled or _lut_size == 0:
 		_environment.adjustment_enabled = false
 		return
@@ -211,6 +296,25 @@ func _apply_grade() -> void:
 		_lut_strength = t.look_grade_strength
 	_environment.adjustment_color_correction = _lut_texture
 	_environment.adjustment_enabled = true
+
+
+## The trailer's softening: the 3D view at `look_finish_scale` of the window, bilinear (nothing else under m6, which gets the viewport back as it
+## was). Only a change is written: a viewport re-makes its render buffers when its scale moves.
+func _apply_finish_scale() -> void:
+	var wanted := Tuning.data.look_finish_scale if finish_on() else 1.0
+	if _scale_before < 0.0:
+		_scale_before = _viewport.scaling_3d_scale
+		_mode_before = _viewport.scaling_3d_mode
+	if finish_on():
+		if _viewport.scaling_3d_mode != Viewport.SCALING_3D_MODE_BILINEAR:
+			_viewport.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+		if not is_equal_approx(_viewport.scaling_3d_scale, wanted):
+			_viewport.scaling_3d_scale = wanted
+	else:
+		if not is_equal_approx(_viewport.scaling_3d_scale, _scale_before):
+			_viewport.scaling_3d_scale = _scale_before
+		if _viewport.scaling_3d_mode != _mode_before:
+			_viewport.scaling_3d_mode = _mode_before
 
 
 func _apply_aa() -> void:
@@ -226,9 +330,10 @@ func _apply_aa() -> void:
 ## Read the LUT strip and keep its bytes, slice after slice, with the identity beside it.
 func _read_lut() -> void:
 	_lut_size = 0
-	if not ResourceLoader.exists(LUT_PATH):
+	_lut_path = LookProfile.grade_lut_path()
+	if not ResourceLoader.exists(_lut_path):
 		return
-	var texture := load(LUT_PATH) as Texture2D
+	var texture := load(_lut_path) as Texture2D
 	if texture == null:
 		return
 	var strip := texture.get_image()
@@ -239,7 +344,7 @@ func _read_lut() -> void:
 	strip.convert(Image.FORMAT_RGB8)
 	var n := strip.get_height()
 	if n < 2 or strip.get_width() != n * n:
-		push_warning("LookPost: %s is not a strip of N slices of N x N" % LUT_PATH)
+		push_warning("LookPost: %s is not a strip of N slices of N x N" % _lut_path)
 		return
 	_graded = PackedByteArray()
 	for b in n:

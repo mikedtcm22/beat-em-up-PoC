@@ -28,6 +28,7 @@ extends GutTest
 ##   A6 test_art_punk, test_skinned_art           A13 test_art_contract, the ledger
 ##   A7 test_skinned_art, test_art_punk           A14 test_slice_crowd, tools/check_m3_log.py
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const SkinnedView := preload("res://tests/skinned_view.gd")
 const FPView := preload("res://tests/fp_view.gd")
 const ArtStrain := preload("res://tests/art_strain.gd")
@@ -124,6 +125,7 @@ func before_each() -> void:
 	TimeController.clear()
 	TimeController.debug_scale = 1.0
 	Tuning.apply(TuningData.new())
+	LookProfileHelper.use_m6()
 	Tuning.data.dummy_health = 500.0
 	SkinnedArt.clear_cache()
 	SkinnedView.clear_cache()

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-140 -150 280 340">
+<!-- The trailer Bruiser's face (M7 x-chars): millimetres over the head's front view, origin (-0.003 m right, 1.68 m up), x to the viewer's right, y DOWN.
+     The visor slot (y 50 to 92) is dark: a heavy brow stroke across its top, two pale slanted eyes with a catchlight inside it, a ridge under the helmet
+     band, and the mask's folds below. White shapes are painted (data-paint), lines go into the ink, data-channel="catch" into the ink map's A. -->
+<g data-view="front" data-origin="-0.003 1.68" data-px="4">
+	<g stroke-width="0.3" opacity="1.0" data-wobble="0.0">
+		<path id="eye_l" d="M -64 67 L -14 75 Q -22 84 -40 83 Q -58 81 -64 73 Z" fill="ink" fill-opacity="1.0" data-paint="#efe6c6"/>
+		<path id="eye_r" d="M 64 67 L 14 75 Q 22 84 40 83 Q 58 81 64 73 Z" fill="ink" fill-opacity="1.0" data-paint="#efe6c6"/>
+	</g>
+	<g stroke-width="0.3" opacity="1.0" data-wobble="0.0" data-channel="catch" fill="ink">
+		<path id="glint_l" d="M -40 75 L -30 76 L -31 80 L -41 79 Z"/>
+		<path id="glint_r" d="M 30 76 L 40 75 L 41 79 L 31 80 Z"/>
+	</g>
+	<g stroke-width="8.5" opacity="1.0" data-taper="0.05,0.3" data-wobble="0.0">
+		<path id="brow_l" d="M -80 54 C -60 56 -34 62 -10 71"/>
+		<path id="brow_r" d="M 80 54 C 60 56 34 62 10 71"/>
+	</g>
+	<g stroke-width="3.0" opacity="1.0" data-taper="0.1,0.2" data-wobble="0.0">
+		<path id="lid_l" d="M -64 67 L -14 75"/>
+		<path id="lid_r" d="M 64 67 L 14 75"/>
+	</g>
+	<g stroke-width="7.0" opacity="1.0" data-taper="0.08,0.08" data-wobble="0.3">
+		<path id="ridge_low" d="M -104 47 C -60 49 60 49 104 47"/>
+	</g>
+	<g stroke-width="4.2" opacity="0.95" data-taper="0.1,0.2" data-wobble="0.3">
+		<path id="ridge_top" d="M -98 22 C -50 19 50 19 98 22"/>
+		<path id="visor_low" d="M -92 96 C -50 99 50 99 92 96"/>
+	</g>
+	<g stroke-width="4.0" opacity="1.0" data-taper="0.1,0.4" data-wobble="0.5">
+		<path id="mask_f1" d="M -52 112 C -44 128 -32 142 -14 152"/>
+		<path id="mask_f2" d="M 52 112 C 44 128 32 142 14 152"/>
+		<path id="mask_f3" d="M -4 112 C 0 128 -4 142 -2 160"/>
+		<path id="mask_f4" d="M -70 128 C -62 146 -50 160 -34 168"/>
+		<path id="mask_f5" d="M 70 128 C 62 146 50 160 34 168"/>
+		<path id="jaw" d="M -66 156 C -40 184 40 184 66 156"/>
+	</g>
+</g>
+</svg>

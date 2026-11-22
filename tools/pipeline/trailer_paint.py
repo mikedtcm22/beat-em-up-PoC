@@ -1,0 +1,821 @@
+"""M7 T12's paint step (the video session's tools/video/art_paint.py, rewritten to the painted material's contract): paint.png and ink.png of one character.
+
+	~/.venvs/beat-em-up-video/bin/python -I tools/pipeline/trailer_paint.py bake  <name> <workdir> <outdir> [variant]
+	~/.venvs/beat-em-up-video/bin/python -I tools/pipeline/trailer_paint.py sheet <name> <workdir> <png> <view> <origin_r_m> <origin_u_m> <half_w_mm> <half_h_mm> <px_per_mm>
+	~/.venvs/beat-em-up-video/bin/python -I tools/pipeline/trailer_paint.py regions <name> <workdir> <png> <view> [x0 x1 z0 z1]
+
+`workdir` is what tools/pipeline/trailer_asset.py wrote (maps.npz, meta.json). `bake` writes <name>_paint.png and <name>_ink.png into `outdir`,
+2048 px on UV2, to the channel contract of docs/ARCHITECTURE.md "The painted material (M7)":
+	paint  RGB   flat local colour per region (assets/source/trailer_art/<name>/paint.json "regions") with the designed shadow shapes drawn in
+	ink    R     the line: seams on the borders of regions, fold lines on the cloth, the drawn face (features.svg)
+	       G     damage class bytes (clothes 255, skin 204, none 128)
+	       B     gloss (255 on glossy regions, none for the Punk)
+	       A     hull weight hint, a smooth function of the rest-pose 3D position (so it is equal on both sides of a UV seam)
+Pure numpy / scipy / opencv / pillow (the venv); Blender is not needed here.
+"""
+import json
+import os
+import sys
+
+import cv2
+import numpy as np
+from PIL import Image
+from scipy import ndimage
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
+ATLAS = os.path.join(ROOT, "assets", "export", "palette", "palette_atlas.png")
+CONFIG_DIR = os.path.join(ROOT, "assets", "source", "trailer_art")
+GRID = (32, 2)
+CELL_PX = 8
+PAD_TEXELS = 16
+## The line and noise sizes are in texels of a 2048 map; multiplied by size / 2048 for the map being baked.
+PXS = 1.0
+## The work directory of the bake in progress (trailer_sheets.py align wrote its aligned sheets into <workdir>/sheets).
+WORKDIR = "."
+
+
+def load_config(name):
+	with open(os.path.join(CONFIG_DIR, name, "paint.json")) as f:
+		return json.load(f)
+
+
+def srgb_to_lin(c):
+	c = np.asarray(c, np.float32)
+	return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+
+
+def lin_to_srgb(c):
+	c = np.clip(np.asarray(c, np.float32), 0.0, 1.0)
+	return np.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055)
+
+
+def load_maps(workdir):
+	m = np.load(os.path.join(workdir, "maps.npz"))
+	meta = json.load(open(os.path.join(workdir, "meta.json")))
+	return {k: m[k] for k in m.files}, meta
+
+
+def cell_ids(maps):
+	"""The palette cell (0..63) of every texel, -1 where nothing is mapped."""
+	uv = maps["uv1"].astype(np.float32)
+	cx = np.clip(np.floor(uv[..., 0] * GRID[0]).astype(int), 0, GRID[0] - 1)
+	cy = np.clip(np.floor((1.0 - uv[..., 1]) * GRID[1]).astype(int), 0, GRID[1] - 1)
+	ids = cy * GRID[0] + cx
+	return np.where(maps["cover"], ids, -1)
+
+
+def atlas_colours():
+	"""(64, 4) the swatch colours (sRGB 0..1) and gloss alpha of the game's palette atlas."""
+	atlas = np.asarray(Image.open(ATLAS).convert("RGBA"), np.float32) / 255.0
+	out = np.zeros((GRID[0] * GRID[1], 4), np.float32)
+	for cy in range(GRID[1]):
+		for cx in range(GRID[0]):
+			out[cy * GRID[0] + cx] = atlas[cy * CELL_PX + CELL_PX // 2, cx * CELL_PX + CELL_PX // 2]
+	return out
+
+
+def smooth_noise(shape, scale_px, seed, octaves=2):
+	"""Low-frequency value noise in 0..1 (gaussian-filtered white noise, normalised), `scale_px` the feature size."""
+	rng = np.random.default_rng(seed)
+	out = np.zeros(shape, np.float32)
+	amp, total = 1.0, 0.0
+	for o in range(octaves):
+		n = rng.standard_normal(shape).astype(np.float32)
+		n = ndimage.gaussian_filter(n, max(scale_px / (2 ** o), 0.6) / 2.0, mode="wrap")
+		n /= max(float(n.std()), 1e-6)
+		out += n * amp
+		total += amp
+		amp *= 0.5
+	out /= total
+	return np.clip(out * 0.25 + 0.5, 0.0, 1.0)
+
+
+def strokes_noise(shape, length_px, width_px, angle_deg, seed):
+	"""Brush-stroke grain: white noise smeared along one direction, normalised to roughly 0..1 around 0.5."""
+	rng = np.random.default_rng(seed)
+	n = rng.standard_normal(shape).astype(np.float32)
+	k = int(length_px * 2) | 1
+	kernel = np.zeros((k, k), np.float32)
+	cv2.line(kernel, (0, k // 2), (k - 1, k // 2), 1.0, max(int(width_px), 1))
+	rot = cv2.getRotationMatrix2D((k / 2, k / 2), angle_deg, 1.0)
+	kernel = cv2.warpAffine(kernel, rot, (k, k))
+	kernel /= max(float(kernel.sum()), 1e-6)
+	n = cv2.filter2D(n, -1, kernel, borderType=cv2.BORDER_WRAP)
+	n /= max(float(n.std()), 1e-6)
+	return np.clip(n * 0.25 + 0.5, 0.0, 1.0)
+
+
+def warp(img, amp_px, scale_px, seed):
+	"""Displace `img` by a smooth noise field (the hand-wobble that keeps an edge from being ruler-clean)."""
+	h, w = img.shape[:2]
+	dx = (smooth_noise((h, w), scale_px, seed) - 0.5) * 2.0 * amp_px * 2.0
+	dy = (smooth_noise((h, w), scale_px, seed + 1) - 0.5) * 2.0 * amp_px * 2.0
+	gx, gy = np.meshgrid(np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32))
+	return cv2.remap(img, gx + dx, gy + dy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+
+
+def luminance(rgb_lin):
+	return rgb_lin @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+
+
+def form_curvature(maps, sigma):
+	"""A smooth signed curvature (convex positive) from the baked shading normals: along each texel axis the normal's change over the
+	position's change (the divergence of the normal), averaged over both axes, then blurred. The mesh's own dihedral curvature
+	(maps["curv"]) is constant over a triangle and straight at its edges, and a threshold of it draws ruler-straight shapes; the
+	normals are smooth across the triangles, so this one thresholds to rounded, wandering shapes. Done in bands of rows (a 4096
+	map's float32 position and normal arrays are 200 MB each)."""
+	pos = maps["pos"]
+	nrm = maps["nrm"]
+	cover = maps["cover"]
+	size = cover.shape[0]
+	out = np.zeros(cover.shape, np.float32)
+	valid = np.zeros(cover.shape, np.float32)
+	band = 256
+	for r0 in range(0, size, band):
+		r1 = min(r0 + band, size)
+		a0, a1 = max(r0 - 2, 0), min(r1 + 2, size)
+		bp = pos[a0:a1].astype(np.float32)
+		bn = nrm[a0:a1].astype(np.float32)
+		bc = cover[a0:a1]
+		bo = np.zeros(bc.shape, np.float32)
+		bv = np.zeros(bc.shape, np.float32)
+		for axis in (0, 1):
+			dp = np.roll(bp, -1, axis) - np.roll(bp, 1, axis)
+			dn = np.roll(bn, -1, axis) - np.roll(bn, 1, axis)
+			ok = bc & np.roll(bc, -1, axis) & np.roll(bc, 1, axis)
+			length = np.linalg.norm(dp, axis=2)
+			ok &= (length < 0.012) & (length > 1e-6)
+			k = (dn * dp).sum(axis=2) / np.maximum((dp * dp).sum(axis=2), 1e-12)
+			bo += np.where(ok, k, 0.0)
+			bv += ok
+		out[r0:r1] = bo[r0 - a0:r1 - a0]
+		valid[r0:r1] = bv[r0 - a0:r1 - a0]
+	out = out / np.maximum(valid, 1.0)
+	weight = cv2.GaussianBlur((valid > 0).astype(np.float32), (0, 0), sigma)
+	blur = cv2.GaussianBlur(out * (valid > 0), (0, 0), sigma)
+	return np.where(weight > 1e-3, blur / np.maximum(weight, 1e-3), 0.0).astype(np.float32)
+
+
+def line_from_valleys(curv, cover, cfg, seed):
+	"""A thin line along the valleys of the curvature: the valley score, kept only near its local maximum, then softened."""
+	size = curv.shape[0]
+	score = np.clip(-cv2.GaussianBlur(curv, (0, 0), cfg.get("crease_blur", 1.0) * PXS), 0.0, None)
+	local = ndimage.maximum_filter(score, size=max(int(round(cfg.get("crease_nms", 5) * PXS)) | 1, 3))
+	keep = (score >= local * cfg.get("crease_keep", 0.78)) & (score > cfg.get("crease_min", 7.0))
+	line = keep.astype(np.float32) * np.clip((score - cfg.get("crease_min", 7.0)) / cfg.get("crease_full", 10.0), 0.15, 1.0)
+	line = cv2.dilate(line, np.ones((max(int(round(2 * PXS)), 2),) * 2, np.uint8))
+	line = cv2.GaussianBlur(line, (0, 0), 0.7 * PXS)
+	# Hand-drawn: the weight comes and goes along the line, and short bits are lost.
+	fade = smooth_noise((size, size), cfg.get("fade_px", 40) * PXS, seed + 21)
+	line *= np.clip((fade - cfg.get("fade_cut", 0.38)) * 5.0, 0.0, 1.0)
+	return line * cover
+
+
+def line_from_borders(ids, cfg, seed):
+	"""Ink on the border between two materials (the shape of a glove, a mask, a cap), a line of about `border_px` texels."""
+	size = ids.shape[0]
+	a = ids.astype(np.int32)
+	edge = np.zeros(a.shape, bool)
+	edge[:, :-1] |= (a[:, :-1] != a[:, 1:]) & (a[:, :-1] >= 0) & (a[:, 1:] >= 0)
+	edge[:-1, :] |= (a[:-1, :] != a[1:, :]) & (a[:-1, :] >= 0) & (a[1:, :] >= 0)
+	edge = edge.astype(np.float32)
+	width = max(int(round(cfg.get("border_px", 2) * PXS)), 1)
+	edge = cv2.dilate(edge, np.ones((width, width), np.uint8))
+	edge = cv2.GaussianBlur(edge, (0, 0), 0.7 * PXS)
+	fade = smooth_noise((size, size), cfg.get("fade_px", 40) * PXS, seed + 31)
+	edge *= np.clip((fade - cfg.get("border_fade_cut", 0.3)) * 4.0, 0.0, 1.0)
+	return edge * cfg.get("border_strength", 0.8)
+
+
+def pad_and_fill(img, cover, texels, info=None):
+	"""Pad every island by `texels` from its nearest covered texel, fill the rest with the mean colour of the covered texels, and
+	return (image, alpha) with alpha 1 on the islands and their padding and 0 elsewhere. `info` is ndimage's (distance, indices)."""
+	if info is None:
+		info = ndimage.distance_transform_edt(~cover, return_indices=True)
+	dist, idx = info
+	grow = (~cover) & (dist <= texels)
+	padded_img = img.copy()
+	padded_img[grow] = img[idx[0], idx[1]][grow]
+	padded = cover | grow
+	mean = padded_img[cover].mean(axis=0)
+	out = np.where(padded[..., None], padded_img, mean[None, None, :]).astype(np.float32)
+	return out, padded
+
+
+def fold_lines(pos, bone, idx, ids, spec, axis, head, e1, e2, seed, cover):
+	"""A cloth's fold lines on the texels of a material around a limb: `count` strokes, each a short curve in the limb's (along, around) plane,
+	slanted by `angle_deg` (+- a spread) and `length_mm` long, heavy at its start and tapering to a point, placed at random (seeded; `t_frac` [a, b] keeps them to that share of the limb's length, an elbow's, say)
+	so no two are alike and none are evenly spaced; not stripes round the limb, but the few creases where the cloth turns."""
+	size = ids.shape[0]
+	mask = np.isin(bone, idx) & (ids == spec["cell"])
+	ys, xs = np.nonzero(mask)
+	out = np.zeros((size, size), np.float32)
+	if len(ys) < 50:
+		return out
+	v = pos[ys, xs] - head
+	t = v @ axis
+	radial = v - t[:, None] * axis
+	r_ref = float(np.median(np.linalg.norm(radial, axis=1)))
+	phi = np.arctan2(radial @ e2, radial @ e1)
+	circ = 2.0 * np.pi * r_ref
+	s_coord = phi * r_ref
+	t_lo, t_hi = np.percentile(t, [3, 97])
+	mm_per_texel = 1000.0 * float(np.median(np.linalg.norm(np.roll(pos, -1, 1) - pos, axis=2)[cover]))
+	rng = np.random.default_rng(seed)
+	acc = np.zeros(len(ys), np.float32)
+	l0, l1 = spec.get("length_mm", [30.0, 70.0])
+	w0 = spec.get("width_mm", 2.6) / 1000.0
+	for k in range(int(spec.get("count", 8))):
+		tf = spec.get("t_frac", [0.0, 1.0])
+		tc = rng.uniform(t_lo + tf[0] * (t_hi - t_lo), t_lo + tf[1] * (t_hi - t_lo))
+		sc = rng.uniform(-circ / 2, circ / 2)
+		length = rng.uniform(l0, l1) / 1000.0
+		th = np.radians(spec.get("angle_deg", 28.0) + rng.normal(0.0, spec.get("angle_spread_deg", 16.0))) * rng.choice([-1.0, 1.0])
+		bend = rng.normal(0.0, 0.18) * length
+		u = np.linspace(0.0, 1.0, 9)
+		pa = np.stack([tc + np.cos(th) * length * (u - 0.5) - np.sin(th) * bend * np.sin(np.pi * u),
+			np.sin(th) * length * (u - 0.5) + np.cos(th) * bend * np.sin(np.pi * u)], axis=1)
+		ds = (s_coord - sc + circ / 2) % circ - circ / 2
+		near = (np.abs(t - tc) < length + 0.02) & (np.abs(ds) < length + 0.02)
+		if not near.any():
+			continue
+		q = np.stack([t[near], ds[near]], axis=1)
+		best = np.full(len(q), 9.0)
+		best_u = np.zeros(len(q))
+		for a, b, ua, ub in zip(pa[:-1], pa[1:], u[:-1], u[1:]):
+			ab = b - a
+			h = np.clip(((q - a) @ ab) / max(float(ab @ ab), 1e-12), 0.0, 1.0)
+			d = np.linalg.norm(q - (a + h[:, None] * ab), axis=1)
+			better = d < best
+			best = np.where(better, d, best)
+			best_u = np.where(better, ua + h * (ub - ua), best_u)
+		width = w0 * (1.0 - best_u) ** 0.9 * np.clip(best_u / 0.1 + 0.25, 0.25, 1.0)
+		line = np.clip((width / 2.0 - best) * 1000.0 / max(mm_per_texel, 0.05) + 0.5, 0.0, 1.0)
+		acc[near] = np.maximum(acc[near], line * rng.uniform(0.65, 1.0))
+	out[ys, xs] = acc * spec.get("strength", 0.8)
+	return out
+
+
+def splat_view(maps, rgb, view, window, px_per_mm):
+	"""Orthographic splat of the texels: returns (image, index) where index[y, x] is the flat texel index (or -1) of the
+	nearest texel to the viewer at that pixel. `window` is (x0, x1, z0, z1) in metres of the view's right and up axes."""
+	right, up, toward = VIEWS[view]
+	pos = maps["pos"].reshape(-1, 3)
+	nrm = maps["nrm"].reshape(-1, 3).astype(np.float32)
+	cov = maps["cover"].reshape(-1)
+	facing = (nrm @ toward) > -0.05
+	sel = np.nonzero(cov & facing)[0]
+	p = pos[sel]
+	x = p @ right
+	z = p @ up
+	d = p @ toward
+	w = int(round((window[1] - window[0]) * 1000 * px_per_mm))
+	h = int(round((window[3] - window[2]) * 1000 * px_per_mm))
+	px = ((x - window[0]) * 1000 * px_per_mm).astype(int)
+	py = ((window[3] - z) * 1000 * px_per_mm).astype(int)
+	ok = (px >= 0) & (px < w) & (py >= 0) & (py < h)
+	sel, px, py, d = sel[ok], px[ok], py[ok], d[ok]
+	order = np.argsort(d)  # far first, so near texels land last
+	flat = py[order] * w + px[order]
+	index = np.full(w * h, -1, np.int64)
+	index[flat] = sel[order]
+	index = index.reshape(h, w)
+	# fill the splat's holes (a texel is smaller than a pixel here, but never exactly): nearest filled neighbour within 2 px
+	empty = index < 0
+	if empty.any():
+		dist, idx = ndimage.distance_transform_edt(empty, return_indices=True)
+		near = index[idx[0], idx[1]]
+		index = np.where(empty & (dist <= max(2.0, px_per_mm * 1.7)) & (near >= 0), near, index)
+	img = np.zeros((h, w, 3), np.float32)
+	have = index >= 0
+	img[have] = rgb.reshape(-1, 3)[index[have]]
+	return img, index
+
+
+
+
+# A view is (screen right, screen up, toward the viewer) in the character's space (+Y is its front, +Z up). "front" is what a
+# viewer in front of the character sees: his left hand on the viewer's right, so the viewer's right is -X.
+VIEWS = {
+	"front": (np.array([-1.0, 0.0, 0.0]), np.array([0.0, 0.0, 1.0]), np.array([0.0, 1.0, 0.0])),
+	"back": (np.array([1.0, 0.0, 0.0]), np.array([0.0, 0.0, 1.0]), np.array([0.0, -1.0, 0.0])),
+	"left": (np.array([0.0, -1.0, 0.0]), np.array([0.0, 0.0, 1.0]), np.array([1.0, 0.0, 0.0])),
+	"right": (np.array([0.0, 1.0, 0.0]), np.array([0.0, 0.0, 1.0]), np.array([-1.0, 0.0, 0.0])),
+	"top": (np.array([-1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]), np.array([0.0, 0.0, 1.0])),
+	# the forearm's outer face (the A-pose arm slants 45 degrees down and out): looking along its normal from above and outside
+	"arm_r": (np.array([0.0, 1.0, 0.0]), np.array([-0.70710678, 0.0, 0.70710678]), np.array([0.70710678, 0.0, 0.70710678])),
+	"arm_l": (np.array([0.0, -1.0, 0.0]), np.array([0.70710678, 0.0, 0.70710678]), np.array([-0.70710678, 0.0, 0.70710678])),
+}
+
+
+
+
+def lit(maps, rgb):
+	"""The colours lit by a fixed soft light from the upper left front, so a preview shows the form."""
+	n = maps["nrm"].astype(np.float32)
+	light = np.array([-0.4, 0.55, 0.7], np.float32)
+	light /= np.linalg.norm(light)
+	lam = np.clip(n @ light, 0.0, 1.0)
+	return rgb * (0.45 + 0.65 * lam[..., None])
+
+
+def save_view(maps, rgb, png, view, window, px_per_mm, grid=None):
+	"""Orthographic splat of `rgb` (size x size x 3, 0..1) in `view`, saved as a png; `grid` = (origin_r, origin_u, half_w_mm, half_h_mm)
+	draws the millimetre grid the features.svg groups use (x right, y DOWN, 0 at the origin, a line every 10 mm)."""
+	img, _ = splat_view(maps, lit(maps, rgb), view, window, px_per_mm)
+	img = np.ascontiguousarray((np.clip(img, 0, 1) * 255.0 + 0.5).astype(np.uint8))
+	if grid is not None:
+		half_w, half_h = grid[2], grid[3]
+		h, w = img.shape[:2]
+		for gx in range(-int(half_w) // 10 * 10, int(half_w) + 1, 10):
+			x = int((gx + half_w) * px_per_mm)
+			major = gx % 50 == 0
+			cv2.line(img, (x, 0), (x, h), (255, 255, 255) if major else (110, 110, 110), 1)
+			if major:
+				cv2.putText(img, str(gx), (x + 2, 12), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 0), 1, cv2.LINE_AA)
+		for gy in range(-int(half_h) // 10 * 10, int(half_h) + 1, 10):
+			y = int((gy + half_h) * px_per_mm)
+			major = gy % 50 == 0
+			cv2.line(img, (0, y), (w, y), (255, 255, 255) if major else (110, 110, 110), 1)
+			if major:
+				cv2.putText(img, str(gy), (2, y - 2), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 0), 1, cv2.LINE_AA)
+	Image.fromarray(img).save(png)
+
+
+def cell_colours(maps):
+	"""The game's palette swatch colours per texel (the placeholder look, for a preview of what the mesh's materials are)."""
+	ids = cell_ids(maps)
+	return np.where((ids >= 0)[..., None], atlas_colours()[np.maximum(ids, 0)][..., :3], 0.0).astype(np.float32)
+
+
+def prepare_config(cfg, maps):
+	"""paint.json "regions_from_atlas": {"shade": 0.7, "tint": [r, g, b]} (a character that KEEPS its M6 colours, Ox): one region per palette cell the mesh uses, its base colour the
+	swatch of the game's atlas (so the paint map is the M6 albedo as flat fills, no repaint), its shade the swatch darkened by `shade` and pulled a little toward `tint` (0..255),
+	its damage class the atlas alpha (255 clothes, 230 clothes without blood, 204 skin, 128 none). The cell rules come FIRST, so the file's own "regions" and "rules" override any
+	cell (a bold face, a bruise region). Without the key the config is returned as it is."""
+	spec = cfg.get("regions_from_atlas")
+	if not spec:
+		return cfg
+	cfg = json.loads(json.dumps(cfg))
+	colours = atlas_colours()
+	ids = cell_ids(maps)
+	mul = float(spec.get("shade", 0.7))
+	tint = np.array(spec.get("tint", [60, 60, 120]), np.float32)
+	regions, rules = {}, []
+	for cell in sorted(int(c) for c in np.unique(ids) if c >= 0):
+		base = np.rint(colours[cell][:3] * 255.0)
+		shade = np.rint(np.clip(base * mul * 0.85 + tint * (1.0 - mul) * 0.15 * (base.mean() / 255.0 + 0.2), 0, 255))
+		klass = min((255, 230, 204, 128), key=lambda k: abs(k - colours[cell][3] * 255.0))
+		regions["cell_%d" % cell] = {"base": [int(v) for v in base], "shade": [int(v) for v in shade], "class": int(klass)}
+		rules.append({"cells": [cell], "region": "cell_%d" % cell})
+	regions.update(cfg["regions"])
+	cfg["regions"] = regions
+	cfg["rules"] = rules + cfg.get("rules", [])
+	return cfg
+
+
+def region_map(maps, meta, cfg):
+	"""(region index per texel, -1 where nothing is mapped; the region names). paint.json "regions" names them with their colours and "rules" assigns
+	them: the rules run in order, each sets the region of the texels that match ALL of its keys, so a later rule overrides an earlier one:
+	  "cells": palette cells of the game's atlas (the mesh's own material labels), "bones": dominant bone names, "box": [[x0, x1], [y0, y1], [z0, z1]]
+	  (metres, rest pose, any axis may be null), "nx"/"ny"/"nz": [lo, hi] of the shading normal's component (C3: the underside of a brim is "nz": [-1, -0.15]),
+  "region": the name it sets."""
+	ids = cell_ids(maps)
+	names = list(cfg["regions"].keys())
+	out = np.full(ids.shape, -1, np.int32)
+	cover = maps["cover"]
+	pos = maps["pos"]
+	for rule in cfg["rules"]:
+		m = cover.copy()
+		if "cells" in rule:
+			m &= np.isin(ids, rule["cells"])
+		if "bones" in rule:
+			m &= np.isin(maps["bone"], [meta["bones"].index(b) for b in rule["bones"]])
+		for axis, span in enumerate(rule.get("box", [])):
+			if span is None:
+				continue
+			m &= (pos[..., axis] >= span[0]) & (pos[..., axis] <= span[1])
+		for axis, key in enumerate(("nx", "ny", "nz")):
+			if key in rule:
+				m &= (maps["nrm"][..., axis] >= rule[key][0]) & (maps["nrm"][..., axis] <= rule[key][1])
+		out[m] = names.index(rule["region"])
+	return out, names
+
+
+def value_noise3(p, scale, seed):
+	"""Smooth 3D value noise of positions p (..., 3), 0..1, lattice `scale` metres: a smooth function of the position alone."""
+	q = p.astype(np.float64) / scale
+	i = np.floor(q)
+	f = q - i
+	f = f * f * (3.0 - 2.0 * f)
+	acc = np.zeros(p.shape[:-1])
+	for dx in (0, 1):
+		for dy in (0, 1):
+			for dz in (0, 1):
+				c = i + np.array([dx, dy, dz])
+				h = np.sin(c[..., 0] * 127.1 + c[..., 1] * 311.7 + c[..., 2] * 74.7 + seed * 19.19) * 43758.5453
+				h = h - np.floor(h)
+				w = (f[..., 0] if dx else 1 - f[..., 0]) * (f[..., 1] if dy else 1 - f[..., 1]) * (f[..., 2] if dz else 1 - f[..., 2])
+				acc += h * w
+	return acc.astype(np.float32)
+
+
+def hull_weight(maps, meta, cfg, seed):
+	"""The ink map's A: the hull's line weight hint, a smooth function of the rest-pose position alone (a seam's two sides are one point, so they
+	read the same value, which the hull needs). A base with a slow 3D noise (the line changes weight along a form), the extremities
+	(`taper_ends`: the hands' and feet's bone tails) thinned so the line tapers toward them."""
+	spec = cfg.get("hull", {})
+	pos = maps["pos"]
+	base = float(spec.get("base", 0.62))
+	var = float(spec.get("variation", 0.32))
+	n = value_noise3(pos, float(spec.get("noise_m", 0.18)), seed + 5)
+	w = base + var * (n * 2.0 - 1.0)
+	for name in spec.get("taper_ends", []):
+		tail = np.array(meta["bone_tails"][name], np.float64)
+		d = np.linalg.norm(pos.astype(np.float64) - tail, axis=-1)
+		w = w * (1.0 - float(spec.get("taper", 0.55)) * np.exp(-((d / float(spec.get("taper_m", 0.07))) ** 2)))
+	return np.clip(w, 0.0, 1.0).astype(np.float32)
+
+
+def sheet_origin(name):
+	"""(right_m, up_m) of the millimetre grid of a character's drawn sheets (assets/source/trailer_art/<name>/sheets.json "origin"), or None."""
+	path = os.path.join(CONFIG_DIR, name, "sheets.json")
+	if not os.path.exists(path):
+		return None
+	with open(path) as f:
+		return json.load(f).get("origin")
+
+
+ORIGIN = None
+
+
+def shape_mask(maps, meta, spec):
+	"""A designed shape on the surface, 0..1 per texel (0.5 on its edge, a ramp `soft` wide in units of its own size: crisp once the shader cuts it at one half).
+	An ellipsoid, given either in the sheets' millimetre grid (what the face drawing and `trailer_paint.py sheet` show) or in the rest pose:
+	  {"at_mm": [x, y], "r_mm": [rx, ry], "depth_mm": d, "angle_deg": a, "soft": s, "bones": [...]}
+	     x right and y DOWN of the sheets' origin (sheets.json "origin"), as features.svg has them; the centre sits on the front-most surface of `bones` (default
+	     Head) at that point, the third radius `depth_mm` (default 40) runs along the view, `angle_deg` turns the ellipse in the view's plane;
+	  {"c": [x, y, z], "r": [rx, ry, rz], "soft": s}   metres, rest pose, axes x, y (front), z (up).
+	Either form may add "wobble": w (the edge wanders by up to w of the shape's size, noise cells "wobble_mm" wide, "seed").
+	Only texels of `bones` (when given) are inside."""
+	pos = maps["pos"].astype(np.float32)
+	cover = maps["cover"]
+	soft = float(spec.get("soft", 0.08))
+	bones_ok = np.ones(cover.shape, bool)
+	if "bones" in spec:
+		bones_ok = np.isin(maps["bone"], [meta["bones"].index(b) for b in spec["bones"]])
+	if "at_mm" in spec:
+		ox, oz = ORIGIN if ORIGIN is not None else (0.0, 0.0)
+		cx = -(ox + spec["at_mm"][0] / 1000.0)
+		cz = oz - spec["at_mm"][1] / 1000.0
+		head_ok = np.isin(maps["bone"], [meta["bones"].index(b) for b in spec.get("bones", ["Head"])]) & cover
+		near = head_ok & (np.abs(pos[..., 0] - cx) < 0.008) & (np.abs(pos[..., 2] - cz) < 0.008)
+		cy = float(pos[..., 1][near].max()) if near.any() else float(meta.get("head", {}).get("centre", [0, 0, 0])[1])
+		rx, ry = spec["r_mm"][0] / 1000.0, spec["r_mm"][1] / 1000.0
+		rz = spec.get("depth_mm", 40.0) / 1000.0
+		a = np.radians(spec.get("angle_deg", 0.0))
+		dx = -(pos[..., 0] - cx)  # screen right
+		dy = pos[..., 2] - cz     # screen up
+		u = dx * np.cos(a) + dy * np.sin(a)
+		v = -dx * np.sin(a) + dy * np.cos(a)
+		d2 = (u / rx) ** 2 + (v / ry) ** 2 + ((pos[..., 1] - cy) / rz) ** 2
+	else:
+		c = np.array(spec["c"], np.float32)
+		r = np.array(spec["r"], np.float32)
+		d2 = (((pos - c) / r) ** 2).sum(axis=2)
+	dist = np.sqrt(d2)
+	if spec.get("wobble"):
+		# an edge that wanders a little (a bruise is never an ellipse): a smooth 3D noise of the position, `wobble` the share of the shape's size it moves the edge
+		n = value_noise3(pos, float(spec.get("wobble_mm", 18.0)) / 1000.0, int(spec.get("seed", 3)))
+		dist = dist * (1.0 + float(spec["wobble"]) * (n * 2.0 - 1.0))
+	m = np.clip((1.0 - dist) / max(soft, 1e-3) + 0.5, 0.0, 1.0)
+	return (m * cover * bones_ok).astype(np.float32)
+
+
+def union_masks(maps, meta, specs):
+	out = np.zeros(maps["cover"].shape, np.float32)
+	for sp in specs:
+		out = np.maximum(out, shape_mask(maps, meta, sp))
+	return out
+
+
+def match_rule(maps, meta, ids, rule):
+	"""The texels a rule's keys all match (the keys of region_map's rules: cells, bones, box, nx, ny, nz)."""
+	m = maps["cover"].copy()
+	if "cells" in rule:
+		m &= np.isin(cell_ids(maps), rule["cells"])
+	if "bones" in rule:
+		m &= np.isin(maps["bone"], [meta["bones"].index(b) for b in rule["bones"]])
+	for axis, span in enumerate(rule.get("box", [])):
+		if span is None:
+			continue
+		m &= (maps["pos"][..., axis] >= span[0]) & (maps["pos"][..., axis] <= span[1])
+	for axis, key in enumerate(("nx", "ny", "nz")):
+		if key in rule:
+			m &= (maps["nrm"][..., axis] >= rule[key][0]) & (maps["nrm"][..., axis] <= rule[key][1])
+	return m
+
+
+def designed_shadows(maps, meta, cfg, ids, names, size):
+	"""paint.json "shadows" "designed": [{"region": "skin" (or a list of regions), "shape": {..shape_mask..} | rule keys (bones, box, nz, ..), "amount": 1.0}]: shadow shapes drawn on purpose (the brim's
+	shadow across the eyes, the chin's under the jaw), on the texels of `region` whatever that region's own "shadow" gate says. A rule's edge is blurred one texel and a half."""
+	out = np.zeros(ids.shape, np.float32)
+	for spec in cfg.get("designed", []):
+		if "shape" in spec:
+			m = shape_mask(maps, meta, spec["shape"])
+			m = np.clip((m - 0.5) / max(spec["shape"].get("soft", 0.08) * 0.5, 0.02) + 0.5, 0.0, 1.0) if spec.get("crisp", True) else m
+		else:
+			m = cv2.GaussianBlur(match_rule(maps, meta, ids, spec).astype(np.float32), (0, 0), 1.5 * PXS)
+		if "region" in spec:
+			regions = spec["region"] if isinstance(spec["region"], list) else [spec["region"]]
+			m = m * np.isin(ids, [names.index(r) for r in regions])
+		out = np.maximum(out, m * float(spec.get("amount", 1.0)))
+	return out
+
+
+def marks_map(maps, meta, cfg, ids, names):
+	"""paint.json "marks": [{"channel": "R"|"G"|"B", "shape": {..shape_mask..}}] -> the mark map, RGBA at half the paint map's size (the shapes are broad), on UV2 with the
+	islands padded: the ramp of each channel (0.5 on a shape's edge) is what toon_painted.gdshader cuts. R a bruise shown from the bruised look up, G a bruise shown from the
+	bloodied look, B a flat blood shape shown from the bloodied look. Only on the regions with damage class 204 (skin)."""
+	size = ids.shape[0]
+	skin = [i for i, n in enumerate(names) if int(cfg["regions"][n].get("class", 255)) == 204]
+	on = np.isin(ids, skin).astype(np.float32)
+	ch = {"R": np.zeros((size, size), np.float32), "G": np.zeros((size, size), np.float32), "B": np.zeros((size, size), np.float32)}
+	for spec in cfg["marks"]:
+		ch[spec["channel"]] = np.maximum(ch[spec["channel"]], shape_mask(maps, meta, spec["shape"]) * on)
+	info = ndimage.distance_transform_edt(~maps["cover"], return_indices=True)
+	planes = []
+	for k in "RGB":
+		filled, pad = pad_and_fill(ch[k][..., None], maps["cover"], PAD_TEXELS, info)
+		planes.append(np.where(pad, filled[..., 0], 0.0))
+	planes.append(np.ones((size, size), np.float32))
+	rgba = np.stack(planes, axis=2)
+	half = size // 2
+	return cv2.resize(rgba, (half, half), interpolation=cv2.INTER_AREA)
+
+
+def shadow_shapes(maps, meta, cfg, ids, seed, size):
+	"""The designed shadow shapes (0/1 with a soft one-texel edge): the hint map (trailer_shade.hint_map: the surfaces that turn from a designed
+	light per form, and the concave forms) thresholded hard, its edge wandering by noise, plus the curvature's deepest valleys (a fold's shadow)."""
+	import trailer_shade as ts
+	curv_s = form_curvature(maps, cfg.get("form_sigma", 3.0) * size / 2048.0)
+	cover = maps["cover"]
+	hint = ts.hint_map(maps, meta, cfg, curv_s, PXS)
+	wob = smooth_noise((size, size), cfg.get("wobble_px", 26) * PXS, seed + 3) - 0.5
+	h = hint + wob * cfg.get("wobble_gain", 0.5)
+	cut = cfg.get("shadow_cut", 0.5)
+	shape = np.clip((h - cut) / max(cfg.get("edge", 0.05), 1e-3) + 0.5, 0.0, 1.0)
+	lo = np.percentile(curv_s[cover], cfg.get("fold_pct", 6.0))
+	spread = max(float(np.percentile(curv_s[cover], 75) - np.percentile(curv_s[cover], 25)) / 1.35, 1e-3)
+	fold = np.clip((lo - (curv_s + wob * spread * 0.6)) / spread * 4.0 + 0.5, 0.0, 1.0) * cfg.get("fold_amount", 0.8)
+	return np.maximum(shape, fold) * cover, hint
+
+
+def fold_set(maps, meta, cfg, ids, names, seed):
+	"""paint.json "folds": [{"bones": [...], "region": name, "count": n, ...}]: trailer_paint.fold_lines on each (cloth creases, tapering strokes)."""
+	size = ids.shape[0]
+	out = np.zeros((size, size), np.float32)
+	pos = maps["pos"].astype(np.float64)
+	for k, spec in enumerate(cfg.get("folds", [])):
+		bn = spec["bones"]
+		head = np.array(meta["bone_heads"][bn[0]], np.float64)
+		tail = np.array(meta["bone_tails"][bn[-1]], np.float64)
+		axis = tail - head
+		axis /= np.linalg.norm(axis)
+		e1 = np.cross(axis, [0.0, 1.0, 0.0])
+		if np.linalg.norm(e1) < 1e-3:
+			e1 = np.cross(axis, [1.0, 0.0, 0.0])
+		e1 /= np.linalg.norm(e1)
+		e2 = np.cross(axis, e1)
+		idx = [meta["bones"].index(n) for n in spec.get("match_bones", bn)]
+		sp = dict(spec)
+		sp["cell"] = names.index(spec["region"])
+		out = np.maximum(out, fold_lines(pos, maps["bone"], idx, ids, sp, axis, head, e1, e2, seed + 91 + k, maps["cover"]))
+	return out
+
+
+def class_bytes(ids, names, cfg):
+	"""The ink map's G: the damage class of every region (paint.json "regions" -> "class": 255 clothes, 204 skin, 128 none)."""
+	table = np.array([float(cfg["regions"][n].get("class", 255)) for n in names] + [128.0], np.float32)
+	return table[ids] / 255.0
+
+
+def apply_sheets(name, maps, meta, cfg, ids, names, paint, ink, size):
+	"""paint.json "sheets": {"groups": {<group>: {...}}}: the Gemini drawings aligned by trailer_sheets.py, projected (trailer_project.sheet_layers). Per group
+	("views" names the sheets, "bones" the body parts it paints): where a view sees a texel squarely the drawing's lines replace the procedural ones on the
+	regions "ink_regions" (and a margin round them); "tones" gives the flat tone classes of regions (base, shade, deep: the drawing's brightness against its
+	region's light tone, each a flat shape, never a gradient)."""
+	import trailer_project as tp
+	d = os.path.join(CONFIG_DIR, name)
+	reg = cfg["regions"]
+	for gname, spec in cfg["sheets"]["groups"].items():
+		ink_t, flat_t, best = tp.sheet_layers(maps, meta, spec, os.path.join(d, "sheets.json"), os.path.join(WORKDIR, "sheets"), size)
+		# the lines need a view that sees the surface squarely (a stretched stroke is a smear); the tone shapes are wide and forgive a grazing view
+		lo, hi = spec.get("ink_conf", [0.3, 0.55])
+		conf = np.clip((best - lo) / max(hi - lo, 1e-3), 0.0, 1.0)
+		lo, hi = spec.get("tone_conf", [0.1, 0.3])
+		conf_tone = cv2.GaussianBlur(np.clip((best - lo) / max(hi - lo, 1e-3), 0.0, 1.0), (0, 0), 1.0 * PXS)
+		lum = flat_t @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+		# the views meet with a little stipple where the splat's visibility is noisy: a median first, then a blur, then the masks lose their specks
+		_d, _i = ndimage.distance_transform_edt(best <= 0.0, return_indices=True)
+		lum = lum[_i[0], _i[1]]
+		lum = cv2.medianBlur(np.clip(lum * 255.0, 0, 255).astype(np.uint8), 2 * int(spec.get("tone_median_px", 4) * PXS) + 1).astype(np.float32) / 255.0
+		lum = cv2.GaussianBlur(lum, (0, 0), spec.get("tone_blur_px", 2.2) * PXS)
+		speck = int(spec.get("tone_speck_px", 120) * PXS * PXS)
+
+		def clean(mask):
+			mask = mask.astype(np.uint8)
+			for flip in (0, 1):
+				m = (mask if not flip else 1 - mask).astype(np.uint8)
+				n, lab, stats, _c = cv2.connectedComponentsWithStats(m, connectivity=4)
+				small = np.zeros(n, bool)
+				small[1:] = stats[1:, cv2.CC_STAT_AREA] < speck
+				m = np.where(small[lab], 0, m)
+				mask = m if not flip else 1 - m
+			return mask.astype(np.float32)
+
+		def soft(x):
+			return np.clip((x - 0.5) / 0.12 + 0.5, 0.0, 1.0)
+
+		for rname, tone in spec.get("tones", {}).items():
+			ri = names.index(rname)
+			m = (ids == ri) & (conf > 0.6)
+			if m.sum() < 500:
+				continue
+			if tone.get("posterize"):
+				# C3 (the clean look): the drawing's own few flat colours (skin, the brim's shadow, the jaw's shadow, the eye white, ...), k of them, each a flat shape
+				# (labels ordered by brightness and median-filtered, so a shape has a clean edge); the lightest big class is put on the region's base colour, the rest keep
+				# their ratio to it, so the face and the neck are one skin and the shadow shapes are the drawing's, never a threshold's
+				k = int(tone["posterize"])
+				sm = cv2.GaussianBlur(flat_t, (0, 0), tone.get("flat_blur_px", 1.2) * PXS)
+				lab, centres = tp.posterize(sm, m, k)
+				order = np.argsort(centres @ np.array([0.2126, 0.7152, 0.0722], np.float32))
+				rank = np.zeros(k, np.int32)
+				rank[order] = np.arange(k)
+				lab = np.where(lab >= 0, rank[np.maximum(lab, 0)], 0)
+				cs = centres[order]
+				lab8 = cv2.medianBlur(np.clip(lab * (255 // max(k - 1, 1)), 0, 255).astype(np.uint8), 2 * int(tone.get("tone_median_px", 5) * PXS) + 1)
+				lab = np.clip(np.rint(lab8.astype(np.float32) / (255 // max(k - 1, 1))), 0, k - 1).astype(np.int32)
+				counts = np.bincount(lab[m], minlength=k).astype(np.float32)
+				ref_k = int(max((i for i in range(k) if counts[i] > 0.12 * counts.sum()), default=k - 1))
+				base = np.array(reg[rname]["base"], np.float32) / 255.0
+				gain = np.clip(base / np.maximum(cs[ref_k], 1e-3), 0.5, 1.6)
+				col = np.clip(cs[lab] * gain[None, None], 0.0, 1.0)
+				col = cv2.GaussianBlur(col, (0, 0), 0.6 * PXS)
+				w = ((ids == ri) * conf_tone)[..., None]
+				paint = paint * (1 - w) + col * w
+				continue
+			ref = float(np.percentile(lum[m], tone.get("ref_pct", 75)))
+			base = np.array(reg[rname]["base"], np.float32) / 255.0
+			shade = np.array(reg[rname]["shade"], np.float32) / 255.0
+			deep = np.array(tone.get("deep", (shade * tone.get("deep_mul", 0.78)) * 255), np.float32) / 255.0
+			sh = soft(cv2.GaussianBlur(clean(lum < ref * tone.get("shade_ratio", 0.88)), (0, 0), 1.2 * PXS))
+			dp = soft(cv2.GaussianBlur(clean(lum < ref * tone.get("deep_ratio", 0.0)), (0, 0), 1.2 * PXS)) if tone.get("deep_ratio", 0.0) > 0 else 0.0 * sh
+			col = base[None, None] * (1 - sh[..., None]) + shade[None, None] * sh[..., None]
+			col = col * (1 - dp[..., None]) + deep[None, None] * dp[..., None]
+			w = ((ids == ri) * conf_tone)[..., None]
+			paint = paint * (1 - w) + col * w
+		# "ink_allow": the drawing's lines survive only inside these shapes (the face keeps its brows, eyes, nose and mouth, and loses the drawing's cheek creases and ear lines)
+		if spec.get("ink_allow"):
+			allow = cv2.GaussianBlur(np.clip((union_masks(maps, meta, spec["ink_allow"]) - 0.4) * 4.0, 0.0, 1.0), (0, 0), 1.0 * PXS)
+			ink_t = ink_t * allow
+		# a line at the middle of the range would flicker at the shader's cut (0.5): make the lines solid with a one-texel soft edge
+		ink_t = cv2.GaussianBlur(ink_t, (0, 0), spec.get("ink_smooth_px", 1.6) * PXS)
+		lo, hi = spec.get("ink_solid", [0.3, 0.6])
+		ink_t = np.clip((ink_t - lo) / max(hi - lo, 1e-3), 0.0, 1.0)
+		# the projected lines lose the specks the views' stipple leaves (a drawn line is many texels long)
+		sp = int(spec.get("ink_speck_px", 60) * PXS * PXS)
+		if sp > 0:
+			n, lab, stats, _c = cv2.connectedComponentsWithStats((ink_t > 0.5).astype(np.uint8), connectivity=8)
+			keep = np.zeros(n, bool)
+			keep[1:] = stats[1:, cv2.CC_STAT_AREA] >= sp
+			ink_t = ink_t * cv2.dilate(keep[lab].astype(np.float32), np.ones((3, 3), np.uint8))
+		# the drawn lines go on the named regions only (and a margin round them: the brow under the brim); the drawing's other parts do not match the mesh's
+		on = np.zeros(ids.shape, np.float32)
+		for rn in spec.get("ink_regions", []):
+			on = np.maximum(on, (ids == names.index(rn)).astype(np.float32))
+		margin = max(int(round(spec.get("ink_margin_mm", 2.5) * 0.77 * PXS)), 1)
+		near = cv2.GaussianBlur(cv2.dilate(on, np.ones((margin * 2 + 1,) * 2, np.uint8)), (0, 0), 1.0 * PXS)
+		w = np.clip(cv2.GaussianBlur(conf, (0, 0), 1.0 * PXS) * 1.2, 0.0, 1.0) * near
+		ink = ink * (1.0 - w) + np.clip(ink_t, 0.0, 1.0) * w
+	return paint, ink
+
+
+def bake(name, workdir, outdir, variant=None):
+	"""Bake <name>_paint.png and <name>_ink.png into `outdir`. With `variant` (a key of paint.json "variants": {"veteran": {"regions": {name:
+	{"base": .., "shade": ..}}}}): the same maps recoloured, only <name>_<variant>_paint.png is written (the ink is the same file)."""
+	global PXS, WORKDIR, ORIGIN
+	WORKDIR = workdir
+	ORIGIN = sheet_origin(name)
+	maps, meta = load_maps(workdir)
+	cfg = prepare_config(load_config(name), maps)
+	if variant:
+		for region, colours in cfg["variants"][variant]["regions"].items():
+			cfg["regions"][region].update(colours)
+	seed = cfg.get("seed", 7)
+	cover = maps["cover"]
+	size = cover.shape[0]
+	PXS = size / 2048.0
+	ids, names = region_map(maps, meta, cfg)
+	reg = cfg["regions"]
+	base_t = np.array([reg[n]["base"] for n in names] + [[0.5, 0.5, 0.5]], np.float32) / 255.0
+	shade_t = np.array([reg[n]["shade"] for n in names] + [[0.4, 0.4, 0.4]], np.float32) / 255.0
+	shadow, _hint = shadow_shapes(maps, meta, cfg.get("shadows", {}), ids, seed, size)
+	gate = np.array([float(reg[n].get("shadow", 1.0)) for n in names] + [0.0], np.float32)[ids]
+	shadow = np.clip(shadow * gate, 0.0, 1.0)
+	shadow = np.maximum(shadow, designed_shadows(maps, meta, cfg.get("shadows", {}), ids, names, size))
+	paint = base_t[ids] * (1.0 - shadow[..., None]) + shade_t[ids] * shadow[..., None]
+	# the grain of a brush in the fill: a faint value change inside a flat region, never a gradient
+	grain = strokes_noise((size, size), 14 * PXS, max(int(2 * PXS), 1), 62, seed + 5) - 0.5
+	paint = paint * (1.0 + grain[..., None] * cfg.get("grain", 0.06))
+	# the lines
+	ink_cfg = cfg.get("ink", {})
+	curv = maps["curv"].astype(np.float32)
+	valleys = line_from_valleys(curv, cover, ink_cfg, seed)
+	skip = [meta["bones"].index(n) for n in ink_cfg.get("crease_skip_bones", []) if n in meta["bones"]]
+	valleys = valleys * (~np.isin(maps["bone"], skip)) * ink_cfg.get("crease_strength", 0.8)
+	merge = {names.index(a): names.index(b) for a, b in ink_cfg.get("merge_for_borders", {}).items() if a in names and b in names}
+	ids_b = ids.copy()
+	for a, b in merge.items():
+		ids_b[ids == a] = b
+	ink = np.maximum(valleys, line_from_borders(ids_b, ink_cfg, seed))
+	ink = np.maximum(ink, fold_set(maps, meta, cfg, ids, names, seed))
+	ink = np.clip(warp(ink, ink_cfg.get("warp_px", 1.2) * PXS, ink_cfg.get("warp_scale_px", 22) * PXS, seed + 41), 0.0, 1.0)
+	for rn in ink_cfg.get("clear_regions", []):
+		ink = ink * (ids != names.index(rn)).astype(np.float32)
+	sheets = cfg.get("sheets")
+	if sheets:
+		paint, ink = apply_sheets(name, maps, meta, cfg, ids, names, paint, ink, size)
+	features = os.path.join(CONFIG_DIR, name, "features.svg")
+	if os.path.exists(features):
+		import trailer_features
+		drawn = trailer_features.render(features, maps, meta, size, seed, os.path.join(CONFIG_DIR, name, "features_uv.svg"), cfg.get("features_skip", ()))
+		ink = np.maximum(ink, drawn["ink"])
+		a = drawn["paint_alpha"][..., None]
+		paint = paint * (1.0 - a) + drawn["paint"] * a
+	klass = class_bytes(ids, names, cfg)
+	gloss = np.zeros((size, size), np.float32)
+	for n in cfg.get("glossy", []):
+		gloss = np.maximum(gloss, (ids == names.index(n)).astype(np.float32))
+	hull = hull_weight(maps, meta, cfg, seed)
+	os.makedirs(outdir, exist_ok=True)
+	info = ndimage.distance_transform_edt(~cover, return_indices=True)
+	paint_p, padded = pad_and_fill(np.clip(paint, 0, 1), cover, PAD_TEXELS, info)
+	Image.fromarray((paint_p * 255.0 + 0.5).astype(np.uint8)).save(os.path.join(outdir, name + ("_%s" % variant if variant else "") + "_paint.png"), optimize=True)
+	if variant:
+		print("T12-PAINT %s %s: recoloured" % (name, variant))
+		return
+	if cfg.get("marks"):
+		mk = marks_map(maps, meta, cfg, ids, names)
+		Image.fromarray((np.clip(mk, 0, 1) * 255.0 + 0.5).astype(np.uint8)).save(os.path.join(outdir, name + "_marks.png"), optimize=True)
+	chans = []
+	for ch, outside in ((ink, 0.0), (klass, 128.0 / 255.0), (gloss, 0.0), (hull, 0.5)):
+		filled, pad = pad_and_fill(ch[..., None], cover, PAD_TEXELS, info)
+		chans.append(np.where(pad, filled[..., 0], outside))
+	rgba = np.stack(chans, axis=2)
+	Image.fromarray((np.clip(rgba, 0, 1) * 255.0 + 0.5).astype(np.uint8)).save(os.path.join(outdir, name + "_ink.png"), optimize=True)
+	stats = {"size": size, "covered_texels": int(cover.sum()), "coverage_share": round(float(cover.mean()), 4),
+		"regions": {n: int((ids == i).sum()) for i, n in enumerate(names)}}
+	with open(os.path.join(workdir, name + "_stats.json"), "w") as f:
+		json.dump(stats, f, indent=1)
+	print("T12-PAINT %s: %dx%d coverage %.3f" % (name, size, size, cover.mean()))
+
+
+def regions_preview(name, workdir, png, view, window, px_per_mm, grid=None, paint_png=None):
+	"""A preview in a view: the regions' base colours (or, with `paint_png`, the baked paint.png sampled through the UV2 layout), lit."""
+	maps, meta = load_maps(workdir)
+	if paint_png:
+		rgb = np.asarray(Image.open(paint_png).convert("RGB"), np.float32) / 255.0
+		ink_png = paint_png.replace("_paint.png", "_ink.png")
+		if os.path.exists(ink_png):
+			line = np.asarray(Image.open(ink_png).convert("RGBA"), np.float32)[..., 0:1] / 255.0
+			rgb = rgb * (1.0 - np.clip((line - 0.3) * 2.0, 0.0, 1.0) * 0.92)
+	else:
+		cfg = prepare_config(load_config(name), maps)
+		ids, names = region_map(maps, meta, cfg)
+		table = np.array([cfg["regions"][n]["base"] for n in names] + [[0, 0, 0]], np.float32) / 255.0
+		rgb = table[ids]
+	save_view(maps, rgb, png, view, window, px_per_mm, grid)
+
+
+if __name__ == "__main__":
+	cmd = sys.argv[1]
+	if cmd == "bake":
+		bake(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5] if len(sys.argv) > 5 else None)
+	elif cmd == "cells":
+		# cells <name> <workdir> <png> <view> [x0 x1 z0 z1]  (the game's own palette cells, lit)
+		maps, _meta = load_maps(sys.argv[3])
+		win = tuple(float(a) for a in sys.argv[6:10]) if len(sys.argv) >= 10 else (-0.5, 0.5, 0.0, 1.85)
+		save_view(maps, cell_colours(maps), sys.argv[4], sys.argv[5], win, float(os.environ.get("PX_PER_MM", "3.0")))
+	elif cmd in ("regions", "painted"):
+		# regions|painted <name> <workdir> <png> <view> [x0 x1 z0 z1]  (painted: the baked <name>_paint.png in <PAINT_DIR>)
+		win = tuple(float(a) for a in sys.argv[6:10]) if len(sys.argv) >= 10 else (-0.5, 0.5, 0.0, 1.85)
+		paint = os.path.join(os.environ["PAINT_DIR"], sys.argv[2] + "_paint.png") if cmd == "painted" else None
+		regions_preview(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], win, float(os.environ.get("PX_PER_MM", "3.0")), None, paint)
+	elif cmd == "sheet":
+		# sheet <name> <workdir> <png> <view> <origin_r_m> <origin_u_m> <half_w_mm> <half_h_mm> <px_per_mm>: the millimetre grid features.svg uses
+		r, u, hw, hh, ppm = (float(a) for a in sys.argv[6:11])
+		win = (r - hw / 1000.0, r + hw / 1000.0, u - hh / 1000.0, u + hh / 1000.0)
+		regions_preview(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], win, ppm, (r, u, hw, hh), os.environ.get("PAINT_PNG"))

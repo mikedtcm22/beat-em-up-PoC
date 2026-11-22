@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CharacterArt" format=3]
+
+[ext_resource type="Script" path="res://game/actors/character_art.gd" id="1_art"]
+[ext_resource type="PackedScene" path="res://assets/export/characters/thug/trailer/thug_trailer.glb" id="2_scene"]
+[ext_resource type="Texture2D" path="res://assets/export/palette/palette_atlas.png" id="3_atlas"]
+[ext_resource type="Texture2D" path="res://assets/export/characters/thug/trailer/thug_paint.png" id="4_paint"]
+[ext_resource type="Texture2D" path="res://assets/export/characters/thug/trailer/thug_ink.png" id="5_ink"]
+[ext_resource type="Texture2D" path="res://assets/export/characters/thug/trailer/thug_marks.png" id="6_marks"]
+
+[resource]
+script = ExtResource("1_art")
+id = &"thug_trailer"
+scene = ExtResource("2_scene")
+palette = ExtResource("3_atlas")
+triangle_budget = 15000
+metadata/paint_tex = ExtResource("4_paint")
+metadata/ink_tex = ExtResource("5_ink")
+metadata/marks_tex = ExtResource("6_marks")

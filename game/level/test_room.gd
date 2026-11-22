@@ -127,6 +127,8 @@ func _spawn_actors() -> void:
 ## audition room (game/audio/audition_room.gd).
 func _build_presentation() -> void:
 	RoomKit.build_presentation(self)
+	# The trailer profile's night look (the same layer a level has; nothing at all under m6).
+	add_child(TrailerLook.new())
 	# The sound audition room (Milestone 6): the bracket, digit, minus and equals keys.
 	add_child(AuditionRoom.new())
 

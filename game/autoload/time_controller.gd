@@ -16,6 +16,12 @@ var _slowmo_left: float = 0.0
 var _slowmo_delay: float = 0.0
 var _pending_slowmo_scale: float = 1.0
 var _pending_slowmo_duration: float = 0.0
+# instance id -> true for every presentation holder that has the whole simulation stopped (hold_sim()).
+var _sim_holds: Dictionary[int, bool] = {}
+# True from the moment the last hold lets go until the next physics tick has read the input (swallows_input()).
+var _swallow_next_poll: bool = false
+# True while loose weapons are frozen for a hold (hold edge in _physics_process).
+var _weapons_held: bool = false
 
 
 ## Freeze `actors` for `duration_s` (rounded to whole physics ticks, minimum 1; divided by
@@ -52,6 +58,42 @@ func slowmo(scale: float, duration_s: float, delay_s: float = 0.0) -> void:
 		_slowmo_left = duration_s
 
 
+## Stop (`on`) or resume the whole simulation for `source`, a presentation node (the M7 cut-in cards: a card holds the
+## game while it is up). Several sources may hold at once; the simulation runs again when the last one lets go.
+## The hold is not a pause: nothing else changes (the HUD keeps running, GameInput.paused stays false).
+func hold_sim(source: Object, on: bool) -> void:
+	if source == null:
+		return
+	if on:
+		_sim_holds[source.get_instance_id()] = true
+	else:
+		var was_held := not _sim_holds.is_empty()
+		_sim_holds.erase(source.get_instance_id())
+		# The press that ended a card is still the Input singleton's "just pressed" on the next physics tick: the player must not read it.
+		if was_held and _sim_holds.is_empty():
+			_swallow_next_poll = true
+
+
+## True while any source holds the simulation (hold_sim()).
+func is_sim_held() -> bool:
+	for id: int in _sim_holds.keys():
+		if is_instance_id_valid(id):
+			return true
+		_sim_holds.erase(id)
+	return false
+
+
+## True when the player's input of this physics tick is not for the simulation: a hold is on, or it has just let go and this is
+## the first tick since (the press that skipped a card is still "just pressed" then). Reading it spends that one tick.
+func swallows_input() -> bool:
+	if is_sim_held():
+		return true
+	if _swallow_next_poll:
+		_swallow_next_poll = false
+		return true
+	return false
+
+
 func is_in_hitstop(actor: Object) -> bool:
 	if actor == null:
 		return false
@@ -69,6 +111,8 @@ func is_slowmo() -> bool:
 
 ## Global sim scale (slow-mo x debug), for sim objects that aren't actors.
 func sim_scale() -> float:
+	if is_sim_held():
+		return 0.0
 	return (_slowmo_scale if _slowmo_left > 0.0 else 1.0) * debug_scale
 
 
@@ -83,6 +127,9 @@ func clear() -> void:
 	_hitstop.clear()
 	_slowmo_left = 0.0
 	_slowmo_delay = 0.0
+	_sim_holds.clear()
+	_swallow_next_poll = false
+	_weapons_held = false
 
 
 func _ready() -> void:
@@ -91,6 +138,15 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	# A hold stops the clocks too: the finisher's hitstop and slow-mo play after the card, not behind it. Hitstop windows are physics
+	# frame numbers, so they slide forward a tick for every tick held; loose weapons (Jolt bodies) are frozen where they are.
+	var held := is_sim_held()
+	_hold_loose_weapons(held)
+	if held:
+		for id: int in _hitstop.keys():
+			var window: Vector2i = _hitstop[id]
+			_hitstop[id] = Vector2i(window.x + 1, window.y + 1)
+		return
 	if not _hitstop.is_empty():
 		var frame := Engine.get_physics_frames()
 		for id: int in _hitstop.keys():
@@ -105,3 +161,30 @@ func _physics_process(delta: float) -> void:
 			_slowmo_left = _pending_slowmo_duration
 	elif _slowmo_left > 0.0:
 		_slowmo_left -= step
+
+
+## Freeze (`on`) or release every loose weapon (a thrown or dropped one is a free RigidBody3D that Jolt keeps stepping) on the edges of a hold.
+## A weapon someone picked up meanwhile (it is frozen already) is left alone.
+func _hold_loose_weapons(on: bool) -> void:
+	if on == _weapons_held:
+		return
+	_weapons_held = on
+	for node: Node in get_tree().get_nodes_in_group(&"weapon"):
+		var body := node as RigidBody3D
+		if body == null:
+			continue
+		if on:
+			if body.freeze:
+				continue
+			body.set_meta(&"hold_velocity", [body.linear_velocity, body.angular_velocity, body.freeze_mode])
+			body.freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
+			body.freeze = true
+		elif body.has_meta(&"hold_velocity"):
+			var velocities: Array = body.get_meta(&"hold_velocity")
+			body.remove_meta(&"hold_velocity")
+			# Frozen for the hold and still loose (nobody picked it up): back to the engine with the velocity it had.
+			if body.freeze and body.get("holder") == null:
+				body.freeze_mode = velocities[2]
+				body.freeze = false
+				body.linear_velocity = velocities[0]
+				body.angular_velocity = velocities[1]

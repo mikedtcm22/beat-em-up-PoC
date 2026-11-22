@@ -95,6 +95,7 @@ static func apply_art(material: ShaderMaterial, level: int) -> void:
 	material.set_shader_parameter(&"damage_skin_tex", skin if skin else VfxArt.clear_detail())
 	material.set_shader_parameter(&"damage_scuff_tex", scuffs if scuffs else VfxArt.clear_detail())
 	material.set_shader_parameter(&"blood_edge", Tuning.data.vfx_blood_edge_cut if per_swatch and level >= Level.BLOODIED else 0.0)
+	material.set_shader_parameter(&"damage_level", float(level))
 	material.set_shader_parameter(&"damage_scale", _scale())
 
 
